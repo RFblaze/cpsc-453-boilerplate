@@ -27,18 +27,7 @@ private:
 	ShaderProgram& shader;
 };
 
-class MyCallbacks2 : public CallbackInterface {
 
-public:
-	MyCallbacks2() {}
-
-	virtual void keyCallback(int key, int scancode, int action, int mods) {
-		if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-			std::cout << "called back" << std::endl;
-		}
-	}
-};
-// END EXAMPLES
 
 int main() {
 	Log::debug("Starting main");
@@ -60,14 +49,37 @@ int main() {
 	GPU_Geometry gpuGeom;
 
 	// vertices
+	// middle
 	cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
 	cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
 	cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
 
+	// right
+	cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
+	cpuGeom.verts.push_back(glm::vec3(1.f, -0.5f, 0.f));
+	cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
+
+	// left
+	cpuGeom.verts.push_back(glm::vec3(-1.f, -0.5f, 0.f));
+	cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
+	cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
+
 	// colours (these should be in linear space)
+	// middle
 	cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); // red
 	cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f)); // green
 	cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f)); // blue
+
+	// right
+	cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f)); // green
+	cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); // red
+	cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f)); // blue
+
+	// left	
+	cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f)); // green
+	cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); // red
+	cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f)); // blue
+	
 
 	gpuGeom.setVerts(cpuGeom.verts);
 	gpuGeom.setCols(cpuGeom.cols);
@@ -81,7 +93,7 @@ int main() {
 
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawArrays(GL_TRIANGLES, 0, 9); // rightmost number means number of vertices
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
 		window.swapBuffers();
