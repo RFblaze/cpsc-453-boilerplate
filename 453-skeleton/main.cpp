@@ -69,6 +69,11 @@ CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int d
 		glm::vec3 q2((0.5 * p1.x) + (0.5 * p2.x), (0.5 * p1.y) + (0.5 * p2.y), 0.f);
 		glm::vec3 q3((0.5 * p2.x) + (0.5 * p3.x), (0.5 * p2.y) + (0.5 * p3.y), 0.f);
 
+		std::cout << "q1: (" << q1.x << ", " << q1.y << ")" << std::endl;
+		std::cout << "q2: (" << q2.x << ", " << q2.y << ")" << std::endl;
+		std::cout << "q3: (" << q3.x << ", " << q3.y << ")" << std::endl << std::endl;
+
+
 		// draw black triangle
 		cpugeom.verts.push_back(q1);
 		cpugeom.verts.push_back(q2);
@@ -162,6 +167,8 @@ int main() {
 	CPU_Geometry cpuGeom;
 	GPU_Geometry gpuGeom;
 
+	int depth_n = -1;
+
 	// RENDER LOOP
 	while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -170,33 +177,36 @@ int main() {
 		
 		switch (user_input[1]){
 			case 1:
-				cpuGeom = sierpinski_triangle(
-					glm::vec3(-0.5f, -0.5f, 0.f), 
-					glm::vec3(0.5f, -0.5f, 0.f), 
-					glm::vec3(0.f, 0.5f, 0.f), 
-					user_input[0], 
-					true
-				);
+				if (user_input[0] != depth_n)
+					cpuGeom = sierpinski_triangle(
+						glm::vec3(-0.5f, -0.5f, 0.f), 
+						glm::vec3(0.5f, -0.5f, 0.f), 
+						glm::vec3(0.f, 0.5f, 0.f), 
+						user_input[0], 
+						true
+					);
 
-				// cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
-				// cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
-				// cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
+					// cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
+					// cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
+					// cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
 
-				// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
-				// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
-				// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
+					// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
+					// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
+					// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
 
-				gpuGeom.setCols(cpuGeom.cols);
-				gpuGeom.setVerts(cpuGeom.verts);
+					gpuGeom.setCols(cpuGeom.cols);
+					gpuGeom.setVerts(cpuGeom.verts);
 
-				shader.use();
-				gpuGeom.bind();
+					shader.use();
+					gpuGeom.bind();
 
-				glEnable(GL_FRAMEBUFFER_SRGB);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size()));
-				glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
-				
+					glEnable(GL_FRAMEBUFFER_SRGB);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size()));
+					glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+					
+					depth_n = user_input[0];
+
 				break;
 			case 2:
 				cpuGeom = pythagoras_tree();
