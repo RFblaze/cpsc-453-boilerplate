@@ -61,48 +61,51 @@ private:
 
 };
 
-CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n, bool base_triangle){
-	CPU_Geometry cpugeom;
-	
-	if (depth_n > 0){
-		glm::vec3 q1((0.5 * p1.x) + (0.5 * p3.x), (0.5 * p1.y) + (0.5 * p3.y), 0.f);
-		glm::vec3 q2((0.5 * p1.x) + (0.5 * p2.x), (0.5 * p1.y) + (0.5 * p2.y), 0.f);
-		glm::vec3 q3((0.5 * p2.x) + (0.5 * p3.x), (0.5 * p2.y) + (0.5 * p3.y), 0.f);
+CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n) {
+    CPU_Geometry cpugeom;
+    
+    if (depth_n > 0) {
+        glm::vec3 q1 = (p1 + p3) * 0.5f;
+        glm::vec3 q2 = (p1 + p2) * 0.5f;
+        glm::vec3 q3 = (p2 + p3) * 0.5f;
 
-		std::cout << "q1: (" << q1.x << ", " << q1.y << ")" << std::endl;
-		std::cout << "q2: (" << q2.x << ", " << q2.y << ")" << std::endl;
-		std::cout << "q3: (" << q3.x << ", " << q3.y << ")" << std::endl << std::endl;
+        // Draw black triangle at this level
+        cpugeom.verts.push_back(q1);
+        cpugeom.verts.push_back(q2);
+        cpugeom.verts.push_back(q3);
 
+        cpugeom.cols.push_back(glm::vec3(0.f, 0.f, 0.f));
+        cpugeom.cols.push_back(glm::vec3(0.f, 0.f, 0.f));
+        cpugeom.cols.push_back(glm::vec3(0.f, 0.f, 0.f));
 
-		// draw black triangle
-		cpugeom.verts.push_back(q1);
-		cpugeom.verts.push_back(q2);
-		cpugeom.verts.push_back(q3);
+        
+        CPU_Geometry branch1 = sierpinski_triangle(p1, q2, q1, depth_n - 1);
+        cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
 
-		cpugeom.cols.push_back(glm::vec3(0.f, 0.f,0.f));
-		cpugeom.cols.push_back(glm::vec3(0.f, 0.f,0.f));
-		cpugeom.cols.push_back(glm::vec3(0.f, 0.f,0.f));
+        CPU_Geometry branch2 = sierpinski_triangle(q2, p2, q3, depth_n - 1);
+        cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
 
+        CPU_Geometry branch3 = sierpinski_triangle(q1, q3, p3, depth_n - 1);
+        cpugeom.verts.insert(cpugeom.verts.end(), branch3.verts.begin(), branch3.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), branch3.cols.begin(), branch3.cols.end());
 
-		sierpinski_triangle(p1, q2, q3, depth_n - 1, false);
-		sierpinski_triangle(q2, p2, q3, depth_n - 1, false);
-		sierpinski_triangle(q1, q3, p3, depth_n - 1, false);
+    } else {
+        // Base case: draw colored triangle using p1, p2, p3
+        cpugeom.verts.push_back(p1);
+        cpugeom.verts.push_back(p2);
+        cpugeom.verts.push_back(p3);
 
-
-	}
-	else if (depth_n == 0 && base_triangle){
-		// draw colored triangle, add new points to cpugeom
-		cpugeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
-		cpugeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
-		cpugeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
-
-		cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
-		cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
-		cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
-
-	}
-	return cpugeom;
+        // Red color for the base triangles
+        cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
+        cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
+        cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
+    }
+    
+    return cpugeom;
 }
+
 
 CPU_Geometry pythagoras_tree(){
 	CPU_Geometry cpugeom;
@@ -183,8 +186,7 @@ int main() {
 						glm::vec3(-0.5f, -0.5f, 0.f), 
 						glm::vec3(0.5f, -0.5f, 0.f), 
 						glm::vec3(0.f, 0.5f, 0.f), 
-						user_input[0], 
-						true
+						user_input[0]
 					);
 
 					gpuGeom.setCols(cpuGeom.cols);
