@@ -167,7 +167,7 @@ int main() {
 	CPU_Geometry cpuGeom;
 	GPU_Geometry gpuGeom;
 
-	int depth_n = -1;
+	int curr_depth_n = -1;
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
@@ -177,7 +177,8 @@ int main() {
 		
 		switch (user_input[1]){
 			case 1:
-				if (user_input[0] != depth_n)
+				if (user_input[0] != curr_depth_n){
+					curr_depth_n = user_input[0];
 					cpuGeom = sierpinski_triangle(
 						glm::vec3(-0.5f, -0.5f, 0.f), 
 						glm::vec3(0.5f, -0.5f, 0.f), 
@@ -185,14 +186,6 @@ int main() {
 						user_input[0], 
 						true
 					);
-
-					// cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
-					// cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
-					// cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
-
-					// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
-					// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
-					// cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
 
 					gpuGeom.setCols(cpuGeom.cols);
 					gpuGeom.setVerts(cpuGeom.verts);
@@ -204,9 +197,9 @@ int main() {
 					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 					glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size()));
 					glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+					window.swapBuffers();
 					
-					depth_n = user_input[0];
-
+				}
 				break;
 			case 2:
 				cpuGeom = pythagoras_tree();
@@ -219,9 +212,6 @@ int main() {
 				break;
 		}
 		
-		
-
-		window.swapBuffers();
 	}
 
 	glfwTerminate();
