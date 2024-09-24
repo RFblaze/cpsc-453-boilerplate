@@ -148,16 +148,73 @@ CPU_Geometry draw_square(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4)
 }
 
 
-CPU_Geometry pythagoras_tree(){
+CPU_Geometry pythagoras_tree(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, int depth_n){
 	CPU_Geometry cpugeom;
 
-	cpugeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
-	cpugeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
-	cpugeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
+	glm::vec3 color = getColorForDepth(depth_n);
 
-	cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
-	cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
-	cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
+	if (depth_n > 0){
+		
+		// u: vector between p1 and p3 
+		glm::vec3 u = (p3 - p1) * 0.5f;
+
+		// v: vector u rotated ccw 90 degrees
+		glm::vec3 v;
+		v.x = -u.y;
+		v.y = u.x;
+		v.z = 0.f;
+
+		// z: point zenith of the triangle
+		glm::vec3 z = p1 + v;
+
+		// w: vector v rotated ccw 90 degrees
+		glm::vec3 w;
+		w.x = -v.y;
+		w.y = v.x;
+		w.z = 0.f;
+
+		// new points
+		glm::vec3 q1 = p1 + w;
+		glm::vec3 q2 = z + w;
+		glm::vec3 q3 = p4 + v;
+		glm::vec3 q4 = z + v;
+
+		// draw the triangle
+		cpugeom.verts.push_back(z);
+		cpugeom.verts.push_back(p1);
+		cpugeom.verts.push_back(p3);
+
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
+
+		CPU_Geometry branch1 = pythagoras_tree(q1, p1, z, q2, depth_n -1);
+		cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
+
+		CPU_Geometry branch2 = pythagoras_tree(q4, z, p4, q3, depth_n - 1);
+		cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
+	}
+	else{
+		// Base Case: Draw a square using points p1,p2,p3,p4
+		cpugeom.verts.push_back(p1);
+		cpugeom.verts.push_back(p2);
+		cpugeom.verts.push_back(p3);
+
+		cpugeom.verts.push_back(p1);
+		cpugeom.verts.push_back(p3);
+		cpugeom.verts.push_back(p4);
+
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
+
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
+	}
+	
 
 	return cpugeom;
 }
@@ -283,12 +340,12 @@ int main() {
 						window.swapBuffers();
 					}
 
-					// cpuGeom = pythagoras_tree();
-					cpuGeom = draw_square(
-						glm::vec3(-0.5f, -0.5f, 0.f), 
-						glm::vec3(0.5f, -0.5f, 0.f), 
-						glm::vec3(0.5f, 0.5f, 0.f),
-						glm::vec3(-0.5f, 0.5f, 0.f)
+					cpuGeom = pythagoras_tree(
+						glm::vec3(-0.25f, -0.25f, 0.f), 
+						glm::vec3(0.25f, -0.25f, 0.f), 
+						glm::vec3(0.25f, 0.25f, 0.f),
+						glm::vec3(-0.25f, 0.25f, 0.f),
+						curr_depth_n
 					);
 
 					gpuGeom.setCols(cpuGeom.cols);
