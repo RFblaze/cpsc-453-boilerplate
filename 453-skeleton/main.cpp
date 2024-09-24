@@ -182,7 +182,7 @@ CPU_Geometry pythagoras_tree(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3
 		// draw the triangle
 		cpugeom.verts.push_back(z);
 		cpugeom.verts.push_back(p1);
-		cpugeom.verts.push_back(p3);
+		cpugeom.verts.push_back(p4);
 
 		cpugeom.cols.push_back(color);
 		cpugeom.cols.push_back(color);
