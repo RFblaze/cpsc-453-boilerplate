@@ -354,10 +354,10 @@ int main() {
 					}
 
 					cpuGeom = pythagoras_tree(
-						glm::vec3(-0.25f, -0.25f, 0.f), 
-						glm::vec3(0.25f, -0.25f, 0.f), 
-						glm::vec3(0.25f, 0.25f, 0.f),
-						glm::vec3(-0.25f, 0.25f, 0.f),
+						glm::vec3(-0.1f, 0.1f, 0.f), 
+						glm::vec3(-0.1f, -0.1f, 0.f), 
+						glm::vec3(0.1f, -0.1f, 0.f),
+						glm::vec3(0.1f, 0.1f, 0.f),
 						curr_depth_n
 					);
 
