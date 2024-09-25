@@ -76,12 +76,12 @@ glm::vec3 getColorForDepth(int depth_n) {
     return colorPalette[depth_n % colorPalette.size()];
 }
 
-CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n) {
+CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n, glm::vec3 color) {
     CPU_Geometry cpugeom;
 
-	glm::vec3 level_color = getColorForDepth(depth_n);
-    
     if (depth_n > 0) {
+		glm::vec3 level_color = getColorForDepth(depth_n);
+
         glm::vec3 q1 = (p1 + p3) * 0.5f;
         glm::vec3 q2 = (p1 + p2) * 0.5f;
         glm::vec3 q3 = (p2 + p3) * 0.5f;
@@ -95,16 +95,16 @@ CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int d
         cpugeom.cols.push_back(glm::vec3(0.f, 0.f, 0.f));
         cpugeom.cols.push_back(glm::vec3(0.f, 0.f, 0.f));
 
-        
-        CPU_Geometry branch1 = sierpinski_triangle(p1, q2, q1, depth_n - 1);
+		// subdivide triangles
+        CPU_Geometry branch1 = sierpinski_triangle(p1, q2, q1, depth_n - 1, level_color);
         cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
         cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
 
-        CPU_Geometry branch2 = sierpinski_triangle(q2, p2, q3, depth_n - 1);
+        CPU_Geometry branch2 = sierpinski_triangle(q2, p2, q3, depth_n - 1, level_color);
         cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
         cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
 
-        CPU_Geometry branch3 = sierpinski_triangle(q1, q3, p3, depth_n - 1);
+        CPU_Geometry branch3 = sierpinski_triangle(q1, q3, p3, depth_n - 1, level_color);
         cpugeom.verts.insert(cpugeom.verts.end(), branch3.verts.begin(), branch3.verts.end());
         cpugeom.cols.insert(cpugeom.cols.end(), branch3.cols.begin(), branch3.cols.end());
 
@@ -114,10 +114,9 @@ CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int d
         cpugeom.verts.push_back(p2);
         cpugeom.verts.push_back(p3);
 
-        // level color for the base triangles
-        cpugeom.cols.push_back(level_color);
-        cpugeom.cols.push_back(level_color);
-        cpugeom.cols.push_back(level_color); 
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
+		cpugeom.cols.push_back(color);
     }
     
     return cpugeom;
@@ -315,7 +314,8 @@ int main() {
 						glm::vec3(-0.5f, -0.5f, 0.f), 
 						glm::vec3(0.5f, -0.5f, 0.f), 
 						glm::vec3(0.f, 0.5f, 0.f), 
-						curr_depth_n
+						curr_depth_n,
+						glm::vec3(0.5f,0.5f,0.5f)
 					);
 
 					gpuGeom.setCols(cpuGeom.cols);
