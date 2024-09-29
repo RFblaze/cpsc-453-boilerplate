@@ -122,31 +122,6 @@ CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int d
     return cpugeom;
 }
 
-CPU_Geometry draw_square(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4){
-	CPU_Geometry cpugeom;
-
-	glm::vec3 color = glm::vec3(0.5f, 0.0f, 0.0f); // Dark Red
-
-	// Define the two triangles that form the square (two triangles make a quad)
-    // Triangle 1: p1, p2, p3
-    cpugeom.verts.push_back(p1);
-    cpugeom.verts.push_back(p2);
-    cpugeom.verts.push_back(p3);
-
-    // Triangle 2: p1, p3, p4
-    cpugeom.verts.push_back(p1);
-    cpugeom.verts.push_back(p3);
-    cpugeom.verts.push_back(p4);
-
-    // Set the same color for each vertex of the square (uniform color)
-    for (int i = 0; i < 6; ++i) {
-        cpugeom.cols.push_back(color); // Set color for each vertex
-    }
-
-    return cpugeom;
-}
-
-
 CPU_Geometry pythagoras_tree(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, int depth_n){
 	CPU_Geometry cpugeom;
 
