@@ -296,17 +296,38 @@ CPU_Geometry koch_snowflake(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_
 	return cpugeom;
 }
 
+CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, int rotate_dir){
+	CPU_Geometry cpugeom;
 
-CPU_Geometry dragon_curve(){
+	if (depth_n == 0){
+		return cpugeom;
+	}
+	else{
+
+	}
+
+	return cpugeom; 
+}
+
+CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_n){
 	CPU_Geometry cpugeom;
 	
-	cpugeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
-	cpugeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
-	cpugeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
+	cpugeom.verts.push_back(p0);
+	cpugeom.verts.push_back(p1);
+	cpugeom.verts.push_back(p2);
 
-	cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
-	cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
-	cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); 
+	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+
+	CPU_Geometry branch1 = line_fold(p0, p1, depth_n, 1);
+	cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
+	cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
+
+	CPU_Geometry branch2 = line_fold(p1, p2, depth_n, -1);
+	cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
+	cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
+
 
 	return cpugeom;
 }
@@ -478,7 +499,24 @@ int main() {
 						gpuGeom.setCols(cpuGeom.cols);
 						gpuGeom.setVerts(cpuGeom.verts);
 					}
-					cpuGeom = dragon_curve();
+					cpuGeom = dragon_curve(
+						glm::vec3(-0.5f, 0.5f, 0.f),
+						glm::vec3(0.f, 0.f, 0.f),
+						glm::vec3(0.5f, 0.5, 0.f),
+						curr_depth_n
+					);
+
+					gpuGeom.setCols(cpuGeom.cols);
+					gpuGeom.setVerts(cpuGeom.verts);
+
+					shader.use();
+					gpuGeom.bind();
+
+					glEnable(GL_FRAMEBUFFER_SRGB);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size()));
+					glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+					window.swapBuffers();
 				}
 				break;
 		}
