@@ -27,7 +27,10 @@ public:
 			}
 
 			if (key == GLFW_KEY_UP) {
-				depth_n += 1;
+				if (depth_n < 8){
+					depth_n += 1;
+				}
+				
 			}
 
 			if (key == GLFW_KEY_DOWN) {
@@ -37,7 +40,9 @@ public:
 			}
 
 			if (key == GLFW_KEY_RIGHT) {
-				scene += 1;
+				if (scene < 4){
+					scene += 1;
+				}
 			}
 
 			if (key == GLFW_KEY_LEFT) {
@@ -296,13 +301,62 @@ CPU_Geometry koch_snowflake(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_
 	return cpugeom;
 }
 
-CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, int rotate_dir){
+CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir){
 	CPU_Geometry cpugeom;
 
 	if (depth_n == 0){
 		return cpugeom;
 	}
 	else{
+
+		glm::vec3 f = p1 - p0; // vector representing the fold
+
+		// unit vector of fold
+		glm::vec3 u = f / (powf(f.x, 2) + powf(f.y, 2));
+
+		// vector to be folded
+		u = (sqrtf(2.f) / 2.f) * u; 
+
+		// rotate 45 degrees based on rotate_dir
+		// rotate_dir == 1 means cw
+		// rotate_dir == -1 means ccw
+		glm::vec3 v;
+		v.x = (sqrtf(2.f) / 2.f) * u.x + (sqrtf(2.f) / 2.f) * u.y * rotate_dir;
+		v.y = (sqrtf(2.f) / 2.f) * u.x * rotate_dir + (sqrtf(2.f) / 2.f) * u.y;
+		v.z = 0.f;
+
+		glm::vec3 q0 = p0 + v;
+
+		cpugeom.verts.push_back(p0);
+		cpugeom.verts.push_back(q0);
+
+		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+
+		// CPU_Geometry subdivision1 = line_fold(p0, q0, depth_n - 1, 1.f);
+		// if (subdivision1.verts.size() != 0){
+		// 	cpugeom.verts.pop_back();
+		// 	cpugeom.verts.pop_back();
+
+		// 	cpugeom.cols.pop_back();
+		// 	cpugeom.cols.pop_back();
+
+		// 	cpugeom.verts.insert(cpugeom.verts.end(), subdivision1.verts.begin(), subdivision1.verts.end());
+		// 	cpugeom.cols.insert(cpugeom.cols.end(), subdivision1.cols.begin(), subdivision1.cols.end());
+		// }
+
+		// CPU_Geometry subdivision2 = line_fold(q0, p1, depth_n - 1, -1);
+		// if (subdivision2.verts.size() != 0){
+		// 	cpugeom.verts.pop_back();
+		// 	cpugeom.verts.pop_back();
+
+		// 	cpugeom.cols.pop_back();
+		// 	cpugeom.cols.pop_back();
+
+		// 	cpugeom.verts.insert(cpugeom.verts.end(), subdivision1.verts.begin(), subdivision1.verts.end());
+		// 	cpugeom.cols.insert(cpugeom.cols.end(), subdivision1.cols.begin(), subdivision1.cols.end());
+		// }
+		
 
 	}
 
@@ -320,14 +374,29 @@ CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_n)
 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
 
-	CPU_Geometry branch1 = line_fold(p0, p1, depth_n, 1);
-	cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
-	cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
+	CPU_Geometry branch1 = line_fold(p0, p1, depth_n, 1.f);
+	if (branch1.verts.size() != 0){
+		cpugeom.verts.pop_back();
+		cpugeom.verts.pop_back();
 
-	CPU_Geometry branch2 = line_fold(p1, p2, depth_n, -1);
-	cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
-	cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
+		cpugeom.cols.pop_back();
+		cpugeom.cols.pop_back();
 
+		cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
+		cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
+	}
+
+	CPU_Geometry branch2 = line_fold(p1, p2, depth_n, -1.f);
+	if (branch2.verts.size() != 0){
+		cpugeom.verts.pop_back();
+		cpugeom.verts.pop_back();
+
+		cpugeom.cols.pop_back();
+		cpugeom.cols.pop_back();
+
+		cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
+		cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
+	}
 
 	return cpugeom;
 }
