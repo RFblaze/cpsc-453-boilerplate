@@ -211,10 +211,47 @@ CPU_Geometry pythagoras_tree(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3
 	return cpugeom;
 }
 
-CPU_Geometry koch_snowflake(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n) {
+CPU_Geometry koch_line(glm::vec3 p0, glm::vec3 p1, int depth_n, bool isFirstTriangle){
+	CPU_Geometry cpugeom;
+
+	if (isFirstTriangle){
+		// draw triangle without splitting line
+
+		glm::vec3 v = p1 - p0; // vector
+
+		// rotation 60 degrees cw
+		glm::vec3 w;
+
+		w.x = (0.5 * v.x) + ((sqrt(3) / 2) * v.y);
+		w.y = ((sqrt(3) / 2) * v.x) + (0.5 * v.y);
+		w.z = 0.f;
+
+		glm::vec3 z = p0 + w; // 3rd point of triangle
+
+		cpugeom.verts.push_back(p0);
+		cpugeom.verts.push_back(z);
+		cpugeom.verts.push_back(p1);
+
+		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+	}
+	else{
+
+	}
+
+	return cpugeom;
+}
+
+CPU_Geometry koch_snowflake(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_n, bool isFirstTriangle) {
     CPU_Geometry cpugeom;
 
+	if (isFirstTriangle){
+		cpugeom = koch_line(p0, p1, depth_n, isFirstTriangle);
+	}
+	// else {
 
+	// }
 
 	return cpugeom;
 }
@@ -366,11 +403,24 @@ int main() {
 						gpuGeom.setVerts(cpuGeom.verts);
 					}
 					cpuGeom = koch_snowflake(
-						glm::vec3(-0.5f, -0.5f, 0.f), 
-						glm::vec3(0.5f, -0.5f, 0.f),
-						glm::vec3(0.f, 0.5f, 0.f), 
-						curr_depth_n
+						glm::vec3(-0.25f, -0.25f, 0.f), 
+						glm::vec3(0.25f, -0.25f, 0.f),
+						glm::vec3(0.f, 0.25f, 0.f), 
+						curr_depth_n,
+						true
 					);
+
+					gpuGeom.setCols(cpuGeom.cols);
+					gpuGeom.setVerts(cpuGeom.verts);
+
+					shader.use();
+					gpuGeom.bind();
+
+					glEnable(GL_FRAMEBUFFER_SRGB);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size()));
+					glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+					window.swapBuffers();
 
 				}
 				break;
