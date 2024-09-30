@@ -363,18 +363,18 @@ CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir
 	return cpugeom; 
 }
 
-CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_n){
+CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, int depth_n){
 	CPU_Geometry cpugeom;
 	
 	cpugeom.verts.push_back(p0);
 	cpugeom.verts.push_back(p1);
-	cpugeom.verts.push_back(p2);
 
 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
 
-	CPU_Geometry branch1 = line_fold(p0, p1, depth_n, 1.f);
+	glm::vec3 m = (p0 + p1) * 0.5f;
+
+	CPU_Geometry branch1 = line_fold(p0, m, depth_n, 1.f);
 	if (branch1.verts.size() != 0){
 		cpugeom.verts.pop_back();
 		cpugeom.verts.pop_back();
@@ -386,7 +386,7 @@ CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_n)
 		cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
 	}
 
-	CPU_Geometry branch2 = line_fold(p1, p2, depth_n, -1.f);
+	CPU_Geometry branch2 = line_fold(m, p1, depth_n, -1.f);
 	if (branch2.verts.size() != 0){
 		cpugeom.verts.pop_back();
 		cpugeom.verts.pop_back();
@@ -569,9 +569,8 @@ int main() {
 						gpuGeom.setVerts(cpuGeom.verts);
 					}
 					cpuGeom = dragon_curve(
-						glm::vec3(-0.5f, 0.5f, 0.f),
-						glm::vec3(0.f, 0.f, 0.f),
-						glm::vec3(0.5f, 0.5, 0.f),
+						glm::vec3(-0.5f, 0.f, 0.f),
+						glm::vec3(0.5f, 0.f, 0.f),
 						curr_depth_n
 					);
 
