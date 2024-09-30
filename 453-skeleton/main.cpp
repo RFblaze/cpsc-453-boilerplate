@@ -225,40 +225,18 @@ CPU_Geometry draw_triangle(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2){
 	return cpugeom;
 }
 
-CPU_Geometry koch_line(glm::vec3 p0, glm::vec3 p1, int depth_n, bool isNewTriangle){
+CPU_Geometry koch_line(glm::vec3 p0, glm::vec3 p1, int depth_n){
 	CPU_Geometry cpugeom;
 
-	if (depth_n = 0){
+	if (depth_n == 0){
+		// Base case: don't draw anything
 		return cpugeom;
 	}
 
-	// if (isNewTriangle){
-	// 	// draw triangle without splitting line
-
-	// 	glm::vec3 v = p1 - p0; // vector
-
-	// 	// rotation 60 degrees cw
-	// 	glm::vec3 w;
-
-	// 	w.x = (0.5 * v.x) + ((sqrt(3) / 2) * v.y);
-	// 	w.y = ((sqrt(3) / 2) * v.x) + (0.5 * v.y);
-	// 	w.z = 0.f;
-
-	// 	glm::vec3 z = p0 + w; // 3rd point of triangle
-
-	// 	cpugeom.verts.push_back(p0);
-	// 	cpugeom.verts.push_back(z);
-	// 	cpugeom.verts.push_back(p1);
-
-	// 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-	// 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-	// 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-	// }
 	else{
 		// splitting line into 4 segments
-
-		glm::vec3 q0 = float((2/3)) * p0 + float((1/3)) * p1;
-		glm::vec3 q1 = float((1/3)) * p1 + float((2/3)) * p1;
+		glm::vec3 q0 = (2.f / 3.f) * p0 + (1.f / 3.f) * p1;
+        glm::vec3 q1 = (1.f / 3.f) * p0 + (2.f / 3.f) * p1;
 
 
 		glm::vec3 b = q1 - q0; // vector spanning the base of the triangle
@@ -266,31 +244,54 @@ CPU_Geometry koch_line(glm::vec3 p0, glm::vec3 p1, int depth_n, bool isNewTriang
 		// rotation 60 degrees cw
 		glm::vec3 w;
 
-		w.x = (0.5 * b.x) + ((sqrt(3) / 2) * b.y);
-		w.y = ((sqrt(3) / 2) * b.x) + (0.5 * b.y);
+		w.x = (0.5f * b.x) + ((sqrtf(3.f) / 2.f) * b.y);
+		w.y = (-((sqrtf(3.f) / 2.f)) * b.x) + (0.5f * b.y);
 		w.z = 0.f;
 
-		glm::vec3 z = p0 + w; // 3rd point of triangle
+		glm::vec3 z = q0 + w; // 3rd point of triangle
 
-		
+		// draw spike & add spike to cpugeom
+		CPU_Geometry spike = draw_triangle(q0, z, q1);
+		cpugeom.verts.insert(cpugeom.verts.end(), spike.verts.begin(), spike.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), spike.cols.begin(), spike.cols.end());
 
+		// Subdividing the individual line segments
+		CPU_Geometry subdivision1 = koch_line(p0, q0, depth_n - 1);
+		cpugeom.verts.insert(cpugeom.verts.end(), subdivision1.verts.begin(), subdivision1.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), subdivision1.cols.begin(), subdivision1.cols.end());
+
+		CPU_Geometry subdivision2 = koch_line(q0, z, depth_n - 1);
+		cpugeom.verts.insert(cpugeom.verts.end(), subdivision2.verts.begin(), subdivision2.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), subdivision2.cols.begin(), subdivision2.cols.end());
+
+		CPU_Geometry subdivision3 = koch_line(z, q1, depth_n - 1);
+		cpugeom.verts.insert(cpugeom.verts.end(), subdivision3.verts.begin(), subdivision3.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), subdivision3.cols.begin(), subdivision3.cols.end());
+
+		CPU_Geometry subdivision4 = koch_line(q1, p1, depth_n - 1);
+		cpugeom.verts.insert(cpugeom.verts.end(), subdivision4.verts.begin(), subdivision4.verts.end());
+        cpugeom.cols.insert(cpugeom.cols.end(), subdivision4.cols.begin(), subdivision4.cols.end());
 	}
 
 	return cpugeom;
 }
 
-CPU_Geometry koch_snowflake(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_n, bool isNewTriangle) {
+CPU_Geometry koch_snowflake(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_n) {
     CPU_Geometry cpugeom;
 
-	if (isNewTriangle){
-		cpugeom = draw_triangle(p0, p1, p2);
-	}
+	cpugeom = draw_triangle(p0, p1, p2);
 	
-	CPU_Geometry branch1 = koch_line(p0, p1, depth_n, false);
+	CPU_Geometry branch1 = koch_line(p0, p1, depth_n);
+	cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
+	cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
 	
-	CPU_Geometry branch2 = koch_line(p1, p2, depth_n, false);
+	CPU_Geometry branch2 = koch_line(p1, p2, depth_n);
+	cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
+	cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
 
-	CPU_Geometry branch3 = koch_line(p2, p0, depth_n, false);
+	CPU_Geometry branch3 = koch_line(p2, p0, depth_n);
+	cpugeom.verts.insert(cpugeom.verts.end(), branch3.verts.begin(), branch3.verts.end());
+	cpugeom.cols.insert(cpugeom.cols.end(), branch3.cols.begin(), branch3.cols.end());
 
 	return cpugeom;
 }
@@ -444,9 +445,8 @@ int main() {
 					cpuGeom = koch_snowflake(
 						glm::vec3(-0.25f, -0.25f, 0.f), 
 						glm::vec3(0.25f, -0.25f, 0.f),
-						glm::vec3(0.f, -0.25f + float(sqrt(3)/2) * 0.5f, 0.f), 
-						curr_depth_n,
-						true
+						glm::vec3(0.f, -0.25f + (sqrtf(3.f)/2.f) * 0.5f, 0.f), 
+						curr_depth_n
 					);
 
 					gpuGeom.setCols(cpuGeom.cols);
