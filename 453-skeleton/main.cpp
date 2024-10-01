@@ -442,8 +442,8 @@ int main() {
 					}
 					cpuGeom = sierpinski_triangle(
 						glm::vec3(-0.5f, -0.5f, 0.f), 
-						glm::vec3(0.5f, -0.5f, 0.f), 
-						glm::vec3(0.f, 0.5f, 0.f), 
+						glm::vec3(0.5f, -0.5f, 0.f),
+						glm::vec3(0.f, -0.5f + (sqrtf(3.f)/2.f), 0.f), 
 						curr_depth_n,
 						glm::vec3(0.5f,0.5f,0.5f)
 					);
