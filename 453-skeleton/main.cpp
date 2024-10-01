@@ -80,11 +80,10 @@ glm::vec3 getColorForDepth(int depth_n) {
     return colorPalette[depth_n % colorPalette.size()];
 }
 
-CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n, glm::vec3 color) {
-    CPU_Geometry cpugeom;
+CPU_Geometry sierpinski_black_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n){
+	CPU_Geometry cpugeom;
 
-    if (depth_n > 0) {
-		glm::vec3 level_color = getColorForDepth(depth_n);
+	if (depth_n > 0) {
 
         glm::vec3 q1 = (p1 + p3) * 0.5f;
         glm::vec3 q2 = (p1 + p2) * 0.5f;
@@ -100,29 +99,38 @@ CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int d
         cpugeom.cols.push_back(glm::vec3(0.f, 0.f, 0.f));
 
 		// subdivide triangles
-        CPU_Geometry branch1 = sierpinski_triangle(p1, q2, q1, depth_n - 1, level_color);
+        CPU_Geometry branch1 = sierpinski_black_triangle(p1, q2, q1, depth_n - 1);
         cpugeom.verts.insert(cpugeom.verts.end(), branch1.verts.begin(), branch1.verts.end());
         cpugeom.cols.insert(cpugeom.cols.end(), branch1.cols.begin(), branch1.cols.end());
 
-        CPU_Geometry branch2 = sierpinski_triangle(q2, p2, q3, depth_n - 1, level_color);
+        CPU_Geometry branch2 = sierpinski_black_triangle(q2, p2, q3, depth_n - 1);
         cpugeom.verts.insert(cpugeom.verts.end(), branch2.verts.begin(), branch2.verts.end());
         cpugeom.cols.insert(cpugeom.cols.end(), branch2.cols.begin(), branch2.cols.end());
 
-        CPU_Geometry branch3 = sierpinski_triangle(q1, q3, p3, depth_n - 1, level_color);
+        CPU_Geometry branch3 = sierpinski_black_triangle(q1, q3, p3, depth_n - 1);
         cpugeom.verts.insert(cpugeom.verts.end(), branch3.verts.begin(), branch3.verts.end());
         cpugeom.cols.insert(cpugeom.cols.end(), branch3.cols.begin(), branch3.cols.end());
 
-    } else {
-        // Base case: draw colored triangle using p1, p2, p3
-        cpugeom.verts.push_back(p1);
-        cpugeom.verts.push_back(p2);
-        cpugeom.verts.push_back(p3);
-
-		cpugeom.cols.push_back(color);
-		cpugeom.cols.push_back(color);
-		cpugeom.cols.push_back(color);
     }
-    
+
+	return cpugeom;
+}
+
+CPU_Geometry sierpinski_triangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, int depth_n) {
+    CPU_Geometry cpugeom;
+
+	cpugeom.verts.push_back(p1);
+	cpugeom.verts.push_back(p2);
+	cpugeom.verts.push_back(p3);
+
+	cpugeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
+	cpugeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f));
+	cpugeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f));
+
+	CPU_Geometry holes = sierpinski_black_triangle(p1,p2,p3, depth_n);
+	cpugeom.verts.insert(cpugeom.verts.end(), holes.verts.begin(), holes.verts.end());
+    cpugeom.cols.insert(cpugeom.cols.end(), holes.cols.begin(), holes.cols.end());
+
     return cpugeom;
 }
 
@@ -300,13 +308,16 @@ CPU_Geometry koch_snowflake(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_
 	return cpugeom;
 }
 
-CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir, glm::vec3 color) {
+CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir) {
     CPU_Geometry cpugeom;
 
     // Base case: depth_n == 0, just return a straight line
     if (depth_n == 0) {
         cpugeom.verts.push_back(p0);
         cpugeom.verts.push_back(p1);
+
+        // Get color for the deepest level
+        glm::vec3 color = getColorForDepth(depth_n);
         cpugeom.cols.push_back(color);
         cpugeom.cols.push_back(color);
         return cpugeom;
@@ -319,7 +330,6 @@ CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir
     glm::vec3 u = d / glm::length(d);
 
     // Rotate the direction vector 45 degrees
-	//
     glm::vec3 v;
     float cos_theta = sqrtf(2.f) / 2.f;
     float sin_theta = rotate_dir * sqrtf(2.f) / 2.f;  // Use rotate_dir to control direction
@@ -330,38 +340,41 @@ CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir
     v.z = 0.f;
 
     // Calculate the fold point
-    glm::vec3 q0 = p0 + v * ((sqrtf(2.f) / 2.f) * glm::length(d)) ;
-
-	//get next color
-	glm::vec3 nextColor = getColorForDepth(depth_n - 1);
+    glm::vec3 q0 = p0 + v * ((sqrtf(2.f) / 2.f) * glm::length(d));
 
     // Recursively fold the left and right parts
-
-    CPU_Geometry left_part = line_fold(p0, q0, depth_n - 1, -1.f, nextColor);  // Flip direction for left
-    CPU_Geometry right_part = line_fold(q0, p1, depth_n - 1, 1.f, nextColor);   // Same direction for right
+    CPU_Geometry left_part = line_fold(p0, q0, depth_n - 1, -1.f);  // Flip direction for left
+    CPU_Geometry right_part = line_fold(q0, p1, depth_n - 1, 1.f);   // Same direction for right
 
     // Append both parts to the current geometry
     cpugeom.verts.insert(cpugeom.verts.end(), left_part.verts.begin(), left_part.verts.end());
     cpugeom.cols.insert(cpugeom.cols.end(), left_part.cols.begin(), left_part.cols.end());
 
+	// Get color for current depth and assign it to the last inserted vertices
+    glm::vec3 currentColor = getColorForDepth(depth_n);
+    cpugeom.cols.back() = currentColor;
+
     cpugeom.verts.insert(cpugeom.verts.end(), right_part.verts.begin(), right_part.verts.end());
     cpugeom.cols.insert(cpugeom.cols.end(), right_part.cols.begin(), right_part.cols.end());
+
+    // Get color for current depth and assign it to the last inserted vertices
+    currentColor = getColorForDepth(depth_n);
+    cpugeom.cols.back() = currentColor;
 
     return cpugeom;
 }
 
 CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, int depth_n){
-	CPU_Geometry cpugeom;
+    CPU_Geometry cpugeom;
 
-	glm::vec3 color = getColorForDepth(depth_n);
+    CPU_Geometry branch = line_fold(p0, p1, depth_n, -1.f);
 
-	CPU_Geometry branch = line_fold(p0, p1, depth_n, -1.f, color);
-	
-	cpugeom.verts.insert(cpugeom.verts.end(), branch.verts.begin(), branch.verts.end());
-	cpugeom.cols.insert(cpugeom.cols.end(), branch.cols.begin(), branch.cols.end());
+    cpugeom.verts.insert(cpugeom.verts.end(), branch.verts.begin(), branch.verts.end());
+    cpugeom.cols.insert(cpugeom.cols.end(), branch.cols.begin(), branch.cols.end());
 
-	return cpugeom;
+    return cpugeom;
 }
+
 
 
 int main() {
@@ -418,8 +431,7 @@ int main() {
 						glm::vec3(-0.5f, -0.5f, 0.f), 
 						glm::vec3(0.5f, -0.5f, 0.f),
 						glm::vec3(0.f, -0.5f + (sqrtf(3.f)/2.f), 0.f), 
-						curr_depth_n,
-						glm::vec3(0.5f,0.5f,0.5f)
+						curr_depth_n
 					);
 
 					gpuGeom.setCols(cpuGeom.cols);
