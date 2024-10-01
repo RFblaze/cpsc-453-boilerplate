@@ -316,7 +316,6 @@ CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir
         cpugeom.verts.push_back(p0);
         cpugeom.verts.push_back(p1);
 
-        // Get color for the deepest level
         glm::vec3 color = getColorForDepth(depth_n);
         cpugeom.cols.push_back(color);
         cpugeom.cols.push_back(color);
@@ -344,22 +343,24 @@ CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir
 
     // Recursively fold the left and right parts
     CPU_Geometry left_part = line_fold(p0, q0, depth_n - 1, -1.f);  // Flip direction for left
-    CPU_Geometry right_part = line_fold(q0, p1, depth_n - 1, 1.f);   // Same direction for right
-
-    // Append both parts to the current geometry
+    
     cpugeom.verts.insert(cpugeom.verts.end(), left_part.verts.begin(), left_part.verts.end());
     cpugeom.cols.insert(cpugeom.cols.end(), left_part.cols.begin(), left_part.cols.end());
 
 	// Get color for current depth and assign it to the last inserted vertices
-    glm::vec3 currentColor = getColorForDepth(depth_n);
-    cpugeom.cols.back() = currentColor;
+    glm::vec3 prevColor = getColorForDepth(depth_n - 1);
+    *(cpugeom.cols.end() - 1) = prevColor;
+	*(cpugeom.cols.end() - 2) = prevColor;
+
+	CPU_Geometry right_part = line_fold(q0, p1, depth_n - 1, 1.f);   // Same direction for right
 
     cpugeom.verts.insert(cpugeom.verts.end(), right_part.verts.begin(), right_part.verts.end());
     cpugeom.cols.insert(cpugeom.cols.end(), right_part.cols.begin(), right_part.cols.end());
 
     // Get color for current depth and assign it to the last inserted vertices
-    currentColor = getColorForDepth(depth_n);
-    cpugeom.cols.back() = currentColor;
+    glm::vec3 currentColor = getColorForDepth(depth_n);
+    *(cpugeom.cols.end() - 1) = currentColor;
+	*(cpugeom.cols.end() - 2) = currentColor;
 
     return cpugeom;
 }
