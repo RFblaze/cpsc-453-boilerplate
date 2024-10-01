@@ -1,5 +1,5 @@
 ### Controls
-**Up/Down Arrow Keys**: Increase/Decrease depth of fractals (min = 0, max = 8)
+**Up/Down Arrow Keys**: Increase/Decrease depth of fractals (min = 0, max = 10)
 
 **Left/Right Arrow Keys**: Switch between scenes. 
 

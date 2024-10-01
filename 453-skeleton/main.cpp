@@ -27,7 +27,7 @@ public:
 			}
 
 			if (key == GLFW_KEY_UP) {
-				if (depth_n < 8){
+				if (depth_n < 10) {
 					depth_n += 1;
 				}
 				
@@ -76,7 +76,6 @@ std::vector<glm::vec3> colorPalette = {
     glm::vec3(0.5f, 1.0f, 0.5f), // Light Green
 };
 
-// Ensure depth_n never exceeds the color palette size
 glm::vec3 getColorForDepth(int depth_n) {
     return colorPalette[depth_n % colorPalette.size()];
 }
@@ -301,90 +300,65 @@ CPU_Geometry koch_snowflake(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, int depth_
 	return cpugeom;
 }
 
-CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir){
-	CPU_Geometry cpugeom;
+CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir, glm::vec3 color) {
+    CPU_Geometry cpugeom;
 
-	if (depth_n == 0){
-		return cpugeom;
-	}
-	else{
+    // Base case: depth_n == 0, just return a straight line
+    if (depth_n == 0) {
+        cpugeom.verts.push_back(p0);
+        cpugeom.verts.push_back(p1);
+        cpugeom.cols.push_back(color);
+        cpugeom.cols.push_back(color);
+        return cpugeom;
+    }
 
-		glm::vec3 d = p1 - p0; // vector representing the fold
+    // Vector from p0 to p1
+    glm::vec3 d = p1 - p0;
 
-		// unit vector of fold
-		glm::vec3 u = d / glm::length(d);
+    // Normalized direction vector
+    glm::vec3 u = d / glm::length(d);
 
-		// vector to be folded
-		glm::vec3 f = (sqrtf(2.f) / 2.f) * u; 
+    // Rotate the direction vector 45 degrees
+	//
+    glm::vec3 v;
+    float cos_theta = sqrtf(2.f) / 2.f;
+    float sin_theta = rotate_dir * sqrtf(2.f) / 2.f;  // Use rotate_dir to control direction
 
-		// rotate 45 degrees based on rotate_dir
-		// rotate_dir == 1 means cw
-		// rotate_dir == -1 means ccw
-		glm::vec3 v;
-		v.x = (sqrtf(2.f) / 2.f) * f.x + (sqrtf(2.f) / 2.f) * f.y * rotate_dir;
-		v.y = (sqrtf(2.f) / 2.f) * f.x * rotate_dir + (sqrtf(2.f) / 2.f) * f.y;
-		v.z = 0.f;
+    // Apply rotation matrix
+    v.x = cos_theta * u.x - sin_theta * u.y;
+    v.y = sin_theta * u.x + cos_theta * u.y;
+    v.z = 0.f;
 
-		glm::vec3 q0 = p0 + v;
+    // Calculate the fold point
+    glm::vec3 q0 = p0 + v * ((sqrtf(2.f) / 2.f) * glm::length(d)) ;
 
-		cpugeom.verts.push_back(p0);
-		cpugeom.verts.push_back(q0);
-		cpugeom.verts.push_back(p1);
+	//get next color
+	glm::vec3 nextColor = getColorForDepth(depth_n - 1);
 
-		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
+    // Recursively fold the left and right parts
 
-		if (depth_n - 1 > 0){
-			cpugeom.verts.pop_back();
-			cpugeom.verts.pop_back();
+    CPU_Geometry left_part = line_fold(p0, q0, depth_n - 1, -1.f, nextColor);  // Flip direction for left
+    CPU_Geometry right_part = line_fold(q0, p1, depth_n - 1, 1.f, nextColor);   // Same direction for right
 
-			cpugeom.cols.pop_back();
-			cpugeom.cols.pop_back();
-		}
-		CPU_Geometry subdivision1 = line_fold(p0, q0, depth_n - 1, -1.f);
-		cpugeom.verts.insert(cpugeom.verts.end(), subdivision1.verts.begin(), subdivision1.verts.end());
-		cpugeom.cols.insert(cpugeom.cols.end(), subdivision1.cols.begin(), subdivision1.cols.end());
-		
-		if (depth_n - 1 > 0){
-			cpugeom.verts.pop_back();
-			cpugeom.verts.pop_back();
+    // Append both parts to the current geometry
+    cpugeom.verts.insert(cpugeom.verts.end(), left_part.verts.begin(), left_part.verts.end());
+    cpugeom.cols.insert(cpugeom.cols.end(), left_part.cols.begin(), left_part.cols.end());
 
-			cpugeom.cols.pop_back();
-			cpugeom.cols.pop_back();
-		}
-		CPU_Geometry subdivision2 = line_fold(q0, p1, depth_n - 1, 1.f);
-		cpugeom.verts.insert(cpugeom.verts.end(), subdivision2.verts.begin(), subdivision2.verts.end());
-		cpugeom.cols.insert(cpugeom.cols.end(), subdivision2.cols.begin(), subdivision2.cols.end());
-		
-		
+    cpugeom.verts.insert(cpugeom.verts.end(), right_part.verts.begin(), right_part.verts.end());
+    cpugeom.cols.insert(cpugeom.cols.end(), right_part.cols.begin(), right_part.cols.end());
 
-	}
-
-	return cpugeom; 
+    return cpugeom;
 }
 
 CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, int depth_n){
 	CPU_Geometry cpugeom;
+
+	glm::vec3 color = getColorForDepth(depth_n);
+
+	CPU_Geometry branch = line_fold(p0, p1, depth_n, -1.f, color);
 	
-	cpugeom.verts.push_back(p0);
-	cpugeom.verts.push_back(p1);
-
-	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
-
-	CPU_Geometry branch = line_fold(p0, p1, depth_n, -1.f);
-	if (branch.cols.size() != 0){
-		cpugeom.verts.pop_back();
-		cpugeom.verts.pop_back();
-
-		cpugeom.cols.pop_back();
-		cpugeom.cols.pop_back();
-	}
 	cpugeom.verts.insert(cpugeom.verts.end(), branch.verts.begin(), branch.verts.end());
 	cpugeom.cols.insert(cpugeom.cols.end(), branch.cols.begin(), branch.cols.end());
-	
-	
 
 	return cpugeom;
 }
