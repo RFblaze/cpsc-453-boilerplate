@@ -309,20 +309,20 @@ CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir
 	}
 	else{
 
-		glm::vec3 f = p1 - p0; // vector representing the fold
+		glm::vec3 d = p1 - p0; // vector representing the fold
 
 		// unit vector of fold
-		glm::vec3 u = f / (powf(f.x, 2) + powf(f.y, 2));
+		glm::vec3 u = d / glm::length(d);
 
 		// vector to be folded
-		u = (sqrtf(2.f) / 2.f) * u; 
+		glm::vec3 f = (sqrtf(2.f) / 2.f) * u; 
 
 		// rotate 45 degrees based on rotate_dir
 		// rotate_dir == 1 means cw
 		// rotate_dir == -1 means ccw
 		glm::vec3 v;
-		v.x = (sqrtf(2.f) / 2.f) * u.x + (sqrtf(2.f) / 2.f) * u.y * rotate_dir;
-		v.y = (sqrtf(2.f) / 2.f) * u.x * rotate_dir + (sqrtf(2.f) / 2.f) * u.y;
+		v.x = (sqrtf(2.f) / 2.f) * f.x + (sqrtf(2.f) / 2.f) * f.y * rotate_dir;
+		v.y = (sqrtf(2.f) / 2.f) * f.x * rotate_dir + (sqrtf(2.f) / 2.f) * f.y;
 		v.z = 0.f;
 
 		glm::vec3 q0 = p0 + v;
@@ -335,29 +335,27 @@ CPU_Geometry line_fold(glm::vec3 p0, glm::vec3 p1, int depth_n, float rotate_dir
 		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
 		cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
 
+		if (depth_n - 1 > 0){
+			cpugeom.verts.pop_back();
+			cpugeom.verts.pop_back();
+
+			cpugeom.cols.pop_back();
+			cpugeom.cols.pop_back();
+		}
 		CPU_Geometry subdivision1 = line_fold(p0, q0, depth_n - 1, -1.f);
-		if (subdivision1.verts.size() != 0){
-			cpugeom.verts.pop_back();
-			cpugeom.verts.pop_back();
-
-			cpugeom.cols.pop_back();
-			cpugeom.cols.pop_back();
-		}
-			cpugeom.verts.insert(cpugeom.verts.end(), subdivision1.verts.begin(), subdivision1.verts.end());
-			cpugeom.cols.insert(cpugeom.cols.end(), subdivision1.cols.begin(), subdivision1.cols.end());
+		cpugeom.verts.insert(cpugeom.verts.end(), subdivision1.verts.begin(), subdivision1.verts.end());
+		cpugeom.cols.insert(cpugeom.cols.end(), subdivision1.cols.begin(), subdivision1.cols.end());
 		
-
-		CPU_Geometry subdivision2 = line_fold(q0, p1, depth_n - 1, 1.f);
-		if (subdivision2.verts.size() != 0){
+		if (depth_n - 1 > 0){
 			cpugeom.verts.pop_back();
 			cpugeom.verts.pop_back();
 
 			cpugeom.cols.pop_back();
 			cpugeom.cols.pop_back();
 		}
-
-			cpugeom.verts.insert(cpugeom.verts.end(), subdivision1.verts.begin(), subdivision1.verts.end());
-			cpugeom.cols.insert(cpugeom.cols.end(), subdivision1.cols.begin(), subdivision1.cols.end());
+		CPU_Geometry subdivision2 = line_fold(q0, p1, depth_n - 1, 1.f);
+		cpugeom.verts.insert(cpugeom.verts.end(), subdivision2.verts.begin(), subdivision2.verts.end());
+		cpugeom.cols.insert(cpugeom.cols.end(), subdivision2.cols.begin(), subdivision2.cols.end());
 		
 		
 
@@ -376,7 +374,7 @@ CPU_Geometry dragon_curve(glm::vec3 p0, glm::vec3 p1, int depth_n){
 	cpugeom.cols.push_back(glm::vec3(1.f, 1.f, 1.f));
 
 	CPU_Geometry branch = line_fold(p0, p1, depth_n, -1.f);
-	if (branch.cols.size()){
+	if (branch.cols.size() != 0){
 		cpugeom.verts.pop_back();
 		cpugeom.verts.pop_back();
 
