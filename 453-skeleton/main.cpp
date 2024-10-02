@@ -2,81 +2,96 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <string>
 
 #include "Geometry.h"
 #include "GLDebug.h"
 #include "Log.h"
 #include "ShaderProgram.h"
 #include "Shader.h"
+#include "Texture.h"
 #include "Window.h"
 
-struct TriangleData {
-	float increment = 0.1f;
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
-	glm::vec3 point1 = glm::vec3(-0.5f, -0.5f, 0.f);
-	glm::vec3 point2 = glm::vec3(0.5f, -0.5f, 0.f);
-	glm::vec3 point3 = glm::vec3(0.f, 0.5f, 0.f);
+// An example struct for Game Objects.
+// You are encouraged to customize this as you see fit.
+struct GameObject {
+	// Struct's constructor deals with the texture.
+	// Also sets default position, theta, scale, and transformationMatrix
+	GameObject(std::string texturePath, GLenum textureInterpolation) :
+		texture(texturePath, textureInterpolation),
+		position(0.0f, 0.0f, 0.0f),
+		theta(0),
+		scale(1),
+		transformationMatrix(1.0f) // This constructor sets it as the identity matrix
+	{}
 
-	bool isDifferent(TriangleData newData){
-		return point1 != newData.point1 ||
-		point2 != newData.point2 ||
-		point3 != newData.point3;
-	}
+	CPU_Geometry cgeom;
+	GPU_Geometry ggeom;
+	Texture texture;
 
+	glm::vec3 position;
+	float theta; // Object's rotation
+	// Alternatively, you could represent rotation via a normalized heading vec:
+	// glm::vec3 heading;
+	float scale; // Or, alternatively, a glm::vec2 scale;
+	glm::mat4 transformationMatrix;
 };
 
 // EXAMPLE CALLBACKS
 class MyCallbacks : public CallbackInterface {
 
 public:
-	MyCallbacks(ShaderProgram& shader) : shader(shader){}
+	MyCallbacks(ShaderProgram& shader) : shader(shader) {}
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) {
-		if (action == GLFW_PRESS){
-			
-			if (key == GLFW_KEY_R ) {
-				shader.recompile();
-			}
-
-			if (key == GLFW_KEY_UP){
-				std::cout << "press up" << std::endl;
-				triangleData.point1.y += triangleData.increment;
-				triangleData.point2.y += triangleData.increment;
-				triangleData.point3.y += triangleData.increment;
-			}
-
-			if (key == GLFW_KEY_DOWN){
-				std::cout << "press down" << std::endl;
-				triangleData.point1.y -= triangleData.increment;
-				triangleData.point2.y -= triangleData.increment;
-				triangleData.point3.y -= triangleData.increment;
-			}
-
-			if (key == GLFW_KEY_LEFT){
-				std::cout << "press left" << std::endl;
-				triangleData.point1.x -= triangleData.increment;
-				triangleData.point2.x -= triangleData.increment;
-				triangleData.point3.x -= triangleData.increment;
-			}
-
-			if (key == GLFW_KEY_RIGHT){
-				std::cout << "press right" << std::endl;
-				triangleData.point1.x += triangleData.increment;
-				triangleData.point2.x += triangleData.increment;
-				triangleData.point3.x += triangleData.increment;
-			}
-		}	
-			
-	}
-
-	TriangleData getTriangleData(){
-		return triangleData;
+		if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+			shader.recompile();
+		}
 	}
 
 private:
 	ShaderProgram& shader;
-	TriangleData triangleData;
 };
+
+CPU_Geometry shipGeom(float width, float height) {
+	float halfWidth = width / 2.0f;
+	float halfHeight = height / 2.0f;
+	CPU_Geometry retGeom;
+	// vertices for the spaceship quad
+	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(-halfWidth, -halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth, halfHeight, 0.f));
+
+	// For full marks (Part IV), you'll need to use the following vertex coordinates instead.
+	// Then, you'd get the correct scale/translation/rotation by passing in uniforms into
+	// the vertex shader.
+	/*
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
+	*/
+
+	// texture coordinates
+	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
+	retGeom.texCoords.push_back(glm::vec2(0.f, 0.f));
+	retGeom.texCoords.push_back(glm::vec2(1.f, 0.f));
+	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
+	retGeom.texCoords.push_back(glm::vec2(1.f, 0.f));
+	retGeom.texCoords.push_back(glm::vec2(1.f, 1.f));
+	return retGeom;
+}
+
+// END EXAMPLES
 
 int main() {
 	Log::debug("Starting main");
@@ -85,71 +100,77 @@ int main() {
 	glfwInit();
 	Window window(800, 800, "CPSC 453"); // can set callbacks at construction if desired
 
+
 	GLDebug::enable();
 
 	// SHADERS
 	ShaderProgram shader("shaders/test.vert", "shaders/test.frag");
 
 	// CALLBACKS
-	std::shared_ptr<MyCallbacks> callbacks = std::make_shared<MyCallbacks>(shader);
-	window.setCallbacks(callbacks); // can also update callbacks to new ones
+	window.setCallbacks(std::make_shared<MyCallbacks>(shader)); // can also update callbacks to new ones
 
-	// GEOMETRY
-	CPU_Geometry cpuGeom;
-	GPU_Geometry gpuGeom;
+	// GL_NEAREST looks a bit better for low-res pixel art than GL_LINEAR.
+	// But for most other cases, you'd want GL_LINEAR interpolation.
+	GameObject ship("textures/ship.png", GL_NEAREST);
 
-	// vertices
-	// middle
-	
-	cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
-	cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
-	cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
+	ship.cgeom = shipGeom(0.18f, 0.12f);
 
-	// colours (these should be in linear space)
-	// middle
-	cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); // red
-	cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f)); // green
-	cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f)); // blue
-	
 
-	gpuGeom.setVerts(cpuGeom.verts);
-	gpuGeom.setCols(cpuGeom.cols);
-
-	TriangleData currTriangle; 
+	ship.ggeom.setVerts(ship.cgeom.verts);
+	ship.ggeom.setTexCoords(ship.cgeom.texCoords);
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
+		int score;
 		glfwPollEvents();
 
-		TriangleData newTriangle = callbacks->getTriangleData();
-		if (currTriangle.isDifferent(newTriangle)){
-
-			cpuGeom.verts.push_back(newTriangle.point1);
-			cpuGeom.verts.push_back(newTriangle.point2);
-			cpuGeom.verts.push_back(newTriangle.point3);
-
-			cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); // red
-			cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f)); // green
-			cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f)); // blue
-
-			gpuGeom.setVerts(cpuGeom.verts);
-			gpuGeom.setCols(cpuGeom.cols);
-
-		}
-
-		currTriangle = newTriangle;
-
-
 		shader.use();
-		gpuGeom.bind();
+		ship.ggeom.bind();
 
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // rightmost number means number of vertices
+		ship.texture.bind();
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		ship.texture.unbind();
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+
+		// Starting the new ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		// Putting the text-containing window in the top-left of the screen.
+		ImGui::SetNextWindowPos(ImVec2(5, 5));
+
+		// Setting flags
+		ImGuiWindowFlags textWindowFlags =
+			ImGuiWindowFlags_NoMove |				// text "window" should not move
+			ImGuiWindowFlags_NoResize |				// should not resize
+			ImGuiWindowFlags_NoCollapse |			// should not collapse
+			ImGuiWindowFlags_NoSavedSettings |		// don't want saved settings mucking things up
+			ImGuiWindowFlags_AlwaysAutoResize |		// window should auto-resize to fit the text
+			ImGuiWindowFlags_NoBackground |			// window should be transparent; only the text should be visible
+			ImGuiWindowFlags_NoDecoration |			// no decoration; only the text should be visible
+			ImGuiWindowFlags_NoTitleBar;			// no title; only the text should be visible
+
+		// Begin a new window with these flags. (bool *)0 is the "default" value for its argument.
+		ImGui::Begin("scoreText", (bool *)0, textWindowFlags);
+
+		// Scale up text a little, and set its value
+		ImGui::SetWindowFontScale(1.5f);
+		ImGui::Text("Score: %d", 0); // Second parameter gets passed into "%d"
+
+		// End the window.
+		ImGui::End();
+
+		ImGui::Render();	// Render the ImGui window
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData()); // Some middleware thing
 
 		window.swapBuffers();
 	}
+	// ImGui cleanup
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	glfwTerminate();
 	return 0;

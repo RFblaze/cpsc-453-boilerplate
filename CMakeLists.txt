@@ -48,6 +48,8 @@ add_subdirectory(thirdparty/fmt-7.0.3)
 set(LIBRARIES ${LIBRARIES} fmt::fmt)
 include_directories(SYSTEM thirdparty/fmt-7.0.3/include)
 
+include_directories(SYSTEM thirdparty/stb-2.26)
+include_directories(SYSTEM thirdparty/imgui-1.78)
 
 find_package(OpenGL REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${OPENGL_gl_LIBRARY})
@@ -57,7 +59,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-Wall" "-pedantic")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	# using GCC
-	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-fdiagnostics-color=always" "-Wall" "-pedantic" "-Wconversion")
+	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-fdiagnostics-color=always" "-Wall" "-pedantic")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 	# using Intel C++
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
@@ -74,21 +76,22 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
 endif()
 
-if(UNIX)
+if(APPLE)
+	set(LIBRARIES ${LIBRARIES} pthread dl)
+elseif(UNIX)
 	set(LIBRARIES ${LIBRARIES} pthread GL dl)
-endif(UNIX)
-if (WIN32)
+elseif(WIN32)
 endif()
 
 
-# add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD=ON)
-# include_directories(SYSTEM thirdparty/imgui thirdparty/imgui/examples)
-# include_directories(src)
+add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD=ON)
+include_directories(SYSTEM thirdparty/imgui thirdparty/imgui/examples)
 
 
 # Compile our main application
 file(GLOB SOURCES
     453-skeleton/*
+	thirdparty/imgui-1.78/imgui/*.cpp
 )
 set(INCLUDES ${INCLUDES} src)
 
@@ -101,6 +104,11 @@ foreach(file ${files})
 	get_filename_component(name ${file} NAME)
 	configure_file(${file} shaders/${name})
 endforeach()
+
+configure_file(textures/ship.png textures/ship.png COPYONLY)
+configure_file(textures/diamond.png textures/diamond.png COPYONLY)
+configure_file(textures/fire.png textures/fire.png COPYONLY)
+
 
 add_executable(${APP_NAME} ${SOURCES})
 target_include_directories(${APP_NAME} PRIVATE ${INCLUDES})
