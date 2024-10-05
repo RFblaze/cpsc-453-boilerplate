@@ -62,23 +62,23 @@ CPU_Geometry shipGeom(float width, float height) {
 	float halfHeight = height / 2.0f;
 	CPU_Geometry retGeom;
 	// vertices for the spaceship quad
-	// retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
-	// retGeom.verts.push_back(glm::vec3(-halfWidth, -halfHeight, 0.f));
-	// retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
-	// retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
-	// retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
-	// retGeom.verts.push_back(glm::vec3(halfWidth, halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(-halfWidth, -halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth, halfHeight, 0.f));
 
 	// For full marks (Part IV), you'll need to use the following vertex coordinates instead.
 	// Then, you'd get the correct scale/translation/rotation by passing in uniforms into
 	// the vertex shader.
 	
-	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
+	// retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	// retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
+	// retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	// retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	// retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	// retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
 	
 
 	// texture coordinates
@@ -95,12 +95,12 @@ CPU_Geometry diamondGeom(){
 	CPU_Geometry retGeom;
 
 	// Square is made of two triangles, so 6 vertices
-	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
-	retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(0.43f, 0.57f, 0.f));
+	retGeom.verts.push_back(glm::vec3(0.43f, 0.43f, 0.f));
+	retGeom.verts.push_back(glm::vec3(0.57f, 0.43f, 0.f));
+	retGeom.verts.push_back(glm::vec3(0.43f, 0.57f, 0.f));
+	retGeom.verts.push_back(glm::vec3(0.57f, 0.43f, 0.f));
+	retGeom.verts.push_back(glm::vec3(0.57f, 0.57f, 0.f));
 
 
 	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
@@ -152,13 +152,37 @@ int main() {
 		glfwPollEvents();
 
 		shader.use();
-		diamond.ggeom.bind();
 
+		// Clear the screen
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// First render the ship
+		ship.ggeom.bind();
+		ship.texture.bind();
+
+		// Here go the transformations
+		/*
+		
+		*/
+		
+		// Draw ship then unbind texture
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		ship.texture.unbind();
+
+		// Then render the diamond
+		diamond.ggeom.bind();
 		diamond.texture.bind();
+
+		// Here go the transformations
+		/*
+		
+		*/
+
+		// Draw diamond then unbind texture
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		diamond.texture.unbind();
+		
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
 		// Starting the new ImGui frame
