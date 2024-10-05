@@ -62,24 +62,24 @@ CPU_Geometry shipGeom(float width, float height) {
 	float halfHeight = height / 2.0f;
 	CPU_Geometry retGeom;
 	// vertices for the spaceship quad
-	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(-halfWidth, -halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(halfWidth, halfHeight, 0.f));
+	// retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
+	// retGeom.verts.push_back(glm::vec3(-halfWidth, -halfHeight, 0.f));
+	// retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
+	// retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
+	// retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
+	// retGeom.verts.push_back(glm::vec3(halfWidth, halfHeight, 0.f));
 
 	// For full marks (Part IV), you'll need to use the following vertex coordinates instead.
 	// Then, you'd get the correct scale/translation/rotation by passing in uniforms into
 	// the vertex shader.
-	/*
+	
 	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
 	retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
 	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
 	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
 	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
 	retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
-	*/
+	
 
 	// texture coordinates
 	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
@@ -88,6 +88,28 @@ CPU_Geometry shipGeom(float width, float height) {
 	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
 	retGeom.texCoords.push_back(glm::vec2(1.f, 0.f));
 	retGeom.texCoords.push_back(glm::vec2(1.f, 1.f));
+	return retGeom;
+}
+
+CPU_Geometry diamondGeom(){
+	CPU_Geometry retGeom;
+
+	// Square is made of two triangles, so 6 vertices
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
+
+
+	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
+	retGeom.texCoords.push_back(glm::vec2(0.f, 0.f));
+	retGeom.texCoords.push_back(glm::vec2(1.f, 0.f));
+	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
+	retGeom.texCoords.push_back(glm::vec2(1.f, 0.f));
+	retGeom.texCoords.push_back(glm::vec2(1.f, 1.f));
+
 	return retGeom;
 }
 
@@ -107,17 +129,22 @@ int main() {
 	ShaderProgram shader("shaders/test.vert", "shaders/test.frag");
 
 	// CALLBACKS
-	window.setCallbacks(std::make_shared<MyCallbacks>(shader)); // can also update callbacks to new ones
+	std::shared_ptr<MyCallbacks> callback = std::make_shared<MyCallbacks>(shader);
+	window.setCallbacks(callback); // can also update callbacks to new ones
 
 	// GL_NEAREST looks a bit better for low-res pixel art than GL_LINEAR.
 	// But for most other cases, you'd want GL_LINEAR interpolation.
 	GameObject ship("textures/ship.png", GL_NEAREST);
+	GameObject diamond("textures/diamond.png", GL_NEAREST);
 
 	ship.cgeom = shipGeom(0.18f, 0.12f);
+	diamond.cgeom = diamondGeom();
 
 
 	ship.ggeom.setVerts(ship.cgeom.verts);
 	ship.ggeom.setTexCoords(ship.cgeom.texCoords);
+	diamond.ggeom.setVerts(diamond.cgeom.verts);
+	diamond.ggeom.setTexCoords(diamond.cgeom.texCoords);
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
@@ -125,13 +152,13 @@ int main() {
 		glfwPollEvents();
 
 		shader.use();
-		ship.ggeom.bind();
+		diamond.ggeom.bind();
 
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		ship.texture.bind();
+		diamond.texture.bind();
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		ship.texture.unbind();
+		diamond.texture.unbind();
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
 		// Starting the new ImGui frame
