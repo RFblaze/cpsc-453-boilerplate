@@ -16,6 +16,8 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 
+CPU_Geometry shipGeom(float width, float height, glm::vec3 offset);
+
 // An example struct for Game Objects.
 // You are encouraged to customize this as you see fit.
 struct GameObject {
@@ -24,7 +26,7 @@ struct GameObject {
 	GameObject(std::string texturePath, GLenum textureInterpolation) :
 		texture(texturePath, textureInterpolation),
 		position(0.0f, 0.0f, 0.0f),
-		theta(0),
+		facing(0.f, 1.f, 0.f),
 		scale(1),
 		transformationMatrix(1.0f) // This constructor sets it as the identity matrix
 	{}
@@ -34,11 +36,22 @@ struct GameObject {
 	Texture texture;
 
 	glm::vec3 position;
-	float theta; // Object's rotation
-	// Alternatively, you could represent rotation via a normalized heading vec:
-	// glm::vec3 heading;
+	glm::vec3 facing;
 	float scale; // Or, alternatively, a glm::vec2 scale;
 	glm::mat4 transformationMatrix;
+
+	// Just testing to see if movement works
+	CPU_Geometry update(glm::vec3 displacement, glm::vec3 direction){
+		this->position = displacement;
+		this->facing = (this->facing + direction) / glm::length(this->facing + direction);
+
+		return shipGeom(0.18f, 0.12f, this->position);
+	}
+};
+
+struct Parameters{
+	glm::vec3 displacement = {0.f,0.f,0.f};
+	glm::vec3 direction = {0.f,0.f,0.f};
 };
 
 // EXAMPLE CALLBACKS
@@ -51,24 +64,52 @@ public:
 		if (key == GLFW_KEY_R && action == GLFW_PRESS) {
 			shader.recompile();
 		}
+
+		if (action == GLFW_PRESS || action == GLFW_REPEAT){
+			if (key == GLFW_KEY_W){
+				playerInputs.displacement += glm::vec3(0.f, 0.012f, 0.f);
+			}
+
+			if (key == GLFW_KEY_A){
+				playerInputs.direction += glm::vec3(-.012f, 0.f, 0.f);
+			}
+
+			if (key == GLFW_KEY_S){
+				playerInputs.displacement += glm::vec3(0.f, -.012f, 0.f);
+			}
+
+			if (key == GLFW_KEY_D){
+				playerInputs.direction += glm::vec3(0.012f, 0.f, 0.f);
+			}
+		}
+	}
+
+	Parameters getParameters(){
+		Parameters ret = playerInputs;
+
+		return ret;
 	}
 
 private:
 	ShaderProgram& shader;
+	Parameters playerInputs;
 };
 
-CPU_Geometry shipGeom(float width, float height) {
+CPU_Geometry shipGeom(float width, float height, glm::vec3 offset) {
+	CPU_Geometry retGeom;
+
 	float halfWidth = width / 2.0f;
 	float halfHeight = height / 2.0f;
-	CPU_Geometry retGeom;
-	// vertices for the spaceship quad
-	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(-halfWidth, -halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(-halfWidth, halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(halfWidth, -halfHeight, 0.f));
-	retGeom.verts.push_back(glm::vec3(halfWidth, halfHeight, 0.f));
 
+	retGeom.verts.push_back(glm::vec3(-halfWidth + offset.x, halfHeight + offset.y, 0.f));
+	retGeom.verts.push_back(glm::vec3(-halfWidth + offset.x, -halfHeight + offset.y, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth + offset.x, -halfHeight + offset.y, 0.f));
+	retGeom.verts.push_back(glm::vec3(-halfWidth + offset.x, halfHeight + offset.y, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth + offset.x, -halfHeight + offset.y, 0.f));
+	retGeom.verts.push_back(glm::vec3(halfWidth + offset.x, halfHeight + offset.y, 0.f));
+
+
+	// vertices for the spaceship quad
 	// For full marks (Part IV), you'll need to use the following vertex coordinates instead.
 	// Then, you'd get the correct scale/translation/rotation by passing in uniforms into
 	// the vertex shader.
@@ -95,12 +136,12 @@ CPU_Geometry diamondGeom(){
 	CPU_Geometry retGeom;
 
 	// Square is made of two triangles, so 6 vertices
-	retGeom.verts.push_back(glm::vec3(0.43f, 0.57f, 0.f));
-	retGeom.verts.push_back(glm::vec3(0.43f, 0.43f, 0.f));
-	retGeom.verts.push_back(glm::vec3(0.57f, 0.43f, 0.f));
-	retGeom.verts.push_back(glm::vec3(0.43f, 0.57f, 0.f));
-	retGeom.verts.push_back(glm::vec3(0.57f, 0.43f, 0.f));
-	retGeom.verts.push_back(glm::vec3(0.57f, 0.57f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
 
 
 	retGeom.texCoords.push_back(glm::vec2(0.f, 1.f));
@@ -137,7 +178,7 @@ int main() {
 	GameObject ship("textures/ship.png", GL_NEAREST);
 	GameObject diamond("textures/diamond.png", GL_NEAREST);
 
-	ship.cgeom = shipGeom(0.18f, 0.12f);
+	ship.cgeom = shipGeom(0.18f, 0.12f, glm::vec3(0.f,0.f,0.f));
 	diamond.cgeom = diamondGeom();
 
 
@@ -149,6 +190,8 @@ int main() {
 	// RENDER LOOP
 	while (!window.shouldClose()) {
 		int score;
+		Parameters user_input = callback->getParameters();
+
 		glfwPollEvents();
 
 		shader.use();
@@ -157,33 +200,48 @@ int main() {
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// Get the user input details
+		glm::vec3 direction_change = user_input.direction;
+		glm::vec3 displacement_change = user_input.displacement;
+
+		// Recalculate ship position
+		ship.cgeom = ship.update(displacement_change, direction_change);
+
+		ship.ggeom.setVerts(ship.cgeom.verts);
+		ship.ggeom.setTexCoords(ship.cgeom.texCoords);
+		diamond.ggeom.setVerts(diamond.cgeom.verts);
+		diamond.ggeom.setTexCoords(diamond.cgeom.texCoords);
+
 		// First render the ship
 		ship.ggeom.bind();
 		ship.texture.bind();
 
 		// Here go the transformations
-		/*
 		
-		*/
+		// glm::mat4 shipTransform = glm::mat4(1.0f); // Identity matrix for now, change if you want to move/rotate
+		// shipTransform = glm::translate(shipTransform, glm::vec3(-0.5f, 0.0f, 0.0f)); // Move left
+		// shader.setUniform("u_Transform", shipTransform);
+		
 		
 		// Draw ship then unbind texture
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		ship.texture.unbind();
-
-		// Then render the diamond
-		diamond.ggeom.bind();
-		diamond.texture.bind();
-
-		// Here go the transformations
-		/*
 		
-		*/
+		// ship.texture.unbind();
 
-		// Draw diamond then unbind texture
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		diamond.texture.unbind();
+		// // Then render the diamond
+		// diamond.ggeom.bind();
+		// diamond.texture.bind();
+
+		// // Here go the transformations
+		// /*
 		
-		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+		// */
+
+		// // Draw diamond then unbind texture
+		// glDrawArrays(GL_TRIANGLES, 0, 6);
+		// diamond.texture.unbind();
+		
+		// glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
 		// Starting the new ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
