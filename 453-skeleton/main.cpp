@@ -15,6 +15,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
+#include <glm/gtc/type_ptr.hpp>
 
 CPU_Geometry shipGeom(float width, float height, glm::vec3 offset, float angle);
 
@@ -193,6 +194,14 @@ int main() {
 	GameObject diamond("textures/diamond.png", GL_NEAREST);
 
 	ship.cgeom = shipGeom(0.18f, 0.18f, glm::vec3(0.f,0.f,0.f), 0.f);
+
+	// translation
+	glm::mat4 M = glm::translate(glm::mat4(1.f), glm::vec3(0.1f, 0.1f, 0.f));
+
+	for(glm::vec3& vert : ship.cgeom.verts){
+		vert = M * glm::vec4(vert, 1.f);
+	}
+
 	diamond.cgeom = diamondGeom();
 
 
@@ -215,11 +224,11 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Get the user input details
-		glm::vec3 direction_change = user_input.direction;
-		glm::vec3 displacement_change = user_input.displacement;
+		// glm::vec3 direction_change = user_input.direction;
+		// glm::vec3 displacement_change = user_input.displacement;
 
 		// Recalculate ship position
-		ship.cgeom = ship.update(displacement_change, direction_change);
+		// ship.cgeom = ship.update(displacement_change, direction_change);
 
 		ship.ggeom.setVerts(ship.cgeom.verts);
 		ship.ggeom.setTexCoords(ship.cgeom.texCoords);
@@ -231,10 +240,7 @@ int main() {
 		ship.texture.bind();
 
 		// Here go the transformations
-		
-		// glm::mat4 shipTransform = glm::mat4(1.0f); // Identity matrix for now, change if you want to move/rotate
-		// shipTransform = glm::translate(shipTransform, glm::vec3(-0.5f, 0.0f, 0.0f)); // Move left
-		// shader.setUniform("u_Transform", shipTransform);
+		glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(M));
 		
 		
 		// Draw ship then unbind texture
