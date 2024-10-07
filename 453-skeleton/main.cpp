@@ -16,7 +16,7 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 
-CPU_Geometry shipGeom(float width, float height, glm::vec3 offset);
+CPU_Geometry shipGeom(float width, float height, glm::vec3 offset, float angle);
 
 // An example struct for Game Objects.
 // You are encouraged to customize this as you see fit.
@@ -43,9 +43,11 @@ struct GameObject {
 	// Just testing to see if movement works
 	CPU_Geometry update(glm::vec3 displacement, glm::vec3 direction){
 		this->position = displacement;
-		this->facing = (this->facing + direction) / glm::length(this->facing + direction);
+		glm::vec3 newFacing = (this->facing + direction) / glm::length(this->facing + direction);
 
-		return shipGeom(0.18f, 0.12f, this->position);
+		float angle = glm::dot(this->facing, newFacing) / (glm::length(this->facing) * glm::length(newFacing));
+
+		return shipGeom(0.18f, 0.18f, this->position, angle);
 	}
 };
 
@@ -67,19 +69,19 @@ public:
 
 		if (action == GLFW_PRESS || action == GLFW_REPEAT){
 			if (key == GLFW_KEY_W){
-				playerInputs.displacement += glm::vec3(0.f, 0.012f, 0.f);
+				playerInputs.displacement += glm::vec3(0.f, 0.016f, 0.f);
 			}
 
 			if (key == GLFW_KEY_A){
-				playerInputs.direction += glm::vec3(-.012f, 0.f, 0.f);
+				playerInputs.direction += glm::vec3(-1.f, 0.f, 0.f);
 			}
 
 			if (key == GLFW_KEY_S){
-				playerInputs.displacement += glm::vec3(0.f, -.012f, 0.f);
+				playerInputs.displacement += glm::vec3(0.f, -.016f, 0.f);
 			}
 
 			if (key == GLFW_KEY_D){
-				playerInputs.direction += glm::vec3(0.012f, 0.f, 0.f);
+				playerInputs.direction += glm::vec3(1.f, 0.f, 0.f);
 			}
 		}
 	}
@@ -95,7 +97,7 @@ private:
 	Parameters playerInputs;
 };
 
-CPU_Geometry shipGeom(float width, float height, glm::vec3 offset) {
+CPU_Geometry shipGeom(float width, float height, glm::vec3 offset, float angle) {
 	CPU_Geometry retGeom;
 
 	float halfWidth = width / 2.0f;
@@ -108,7 +110,19 @@ CPU_Geometry shipGeom(float width, float height, glm::vec3 offset) {
 	retGeom.verts.push_back(glm::vec3(halfWidth + offset.x, -halfHeight + offset.y, 0.f));
 	retGeom.verts.push_back(glm::vec3(halfWidth + offset.x, halfHeight + offset.y, 0.f));
 
+	// This rotates them based on angle
+	for (size_t i = 0; i < retGeom.verts.size(); i++){
+		float x = retGeom.verts[i].x;
+		float y = retGeom.verts[i].y;
 
+		// Apply the 2D rotation formula
+        float newX = x * cos(angle) - y * sin(angle);
+        float newY = x * sin(angle) + y * cos(angle);
+
+        // Update the vertex position
+        retGeom.verts[i].x = newX;
+        retGeom.verts[i].y = newY;
+	}
 	// vertices for the spaceship quad
 	// For full marks (Part IV), you'll need to use the following vertex coordinates instead.
 	// Then, you'd get the correct scale/translation/rotation by passing in uniforms into
@@ -178,7 +192,7 @@ int main() {
 	GameObject ship("textures/ship.png", GL_NEAREST);
 	GameObject diamond("textures/diamond.png", GL_NEAREST);
 
-	ship.cgeom = shipGeom(0.18f, 0.12f, glm::vec3(0.f,0.f,0.f));
+	ship.cgeom = shipGeom(0.18f, 0.18f, glm::vec3(0.f,0.f,0.f), 0.f);
 	diamond.cgeom = diamondGeom();
 
 
