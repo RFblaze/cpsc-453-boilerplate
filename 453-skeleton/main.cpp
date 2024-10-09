@@ -86,6 +86,23 @@ public:
 			}
 		}
 	}
+	// assume fixed window size
+	virtual void cursorPosCallback(double xpos, double ypos){
+		glm::vec4 cursor = {xpos, ypos, 0.f, 1.f};
+		std::cout << cursor.x << " " << cursor.y << std::endl;
+
+		// translates by half a pixel for pixel center being considered for cursor position
+		glm::mat4 pixel_centering_T = glm::translate(glm::mat4(1.f), glm::vec3(0.5f,0.5f,0.f));
+
+		// normalize: x will be between 0 and 2 and y will be between -2 and 0
+		// 0 and 2 because our square goes from -1 to 1
+		// glm::mat4 normalize_S = glm::scale(glm::mat4(1.f), );
+
+		// translates by 1 to the left to make it between -1 and 1
+		
+
+
+	}
 
 	Parameters getParameters(){
 		Parameters ret = playerInputs;
