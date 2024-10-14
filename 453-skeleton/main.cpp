@@ -147,7 +147,7 @@ CPU_Geometry shipGeom(float scale, glm::vec3 center, glm::vec3 facing) {
 	float halfHeight = 0.18f * 0.5f * scale;
 
 	// rotation angle wrt y-axis
-	float angle = glm::dot(glm::vec3(0.f,1.f,0.f), facing);
+	float angle =  acos(glm::dot(glm::vec3(0.f,1.f,0.f), facing));
 
 	// vector from origin to the 4 corners of ship
 	glm::vec3 v0 = glm::vec3(-halfWidth, halfHeight,0.f) - glm::vec3(0.f,0.f,0.f);
@@ -156,7 +156,7 @@ CPU_Geometry shipGeom(float scale, glm::vec3 center, glm::vec3 facing) {
 	glm::vec3 v3 = glm::vec3(halfWidth, halfHeight,0.f) - glm::vec3(0.f,0.f,0.f);
 
 	// rotate the vectors by the rotation angle
-	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f, 0.f, 1.f));
+	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.f), angle, glm::vec3(0.f, 0.f, 1.f));
 
 	glm::vec3 v0prime = glm::vec3(rotationMatrix * glm::vec4(v0, 0.0f));
 	glm::vec3 v1prime = glm::vec3(rotationMatrix * glm::vec4(v1, 0.0f));
@@ -253,9 +253,6 @@ int main() {
 	// But for most other cases, you'd want GL_LINEAR interpolation.
 	GameObject ship("textures/ship.png", GL_NEAREST);
 	GameObject diamond("textures/diamond.png", GL_NEAREST);
-
-	glm::vec3 curr_direction = ship.facing;
-	glm::vec3 curr_position = ship.position;
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
