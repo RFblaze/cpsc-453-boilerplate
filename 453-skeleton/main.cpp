@@ -31,13 +31,13 @@ struct GameObject {
 		scale(1),
 		transformationMatrix(1.0f)// This constructor sets it as the identity matrix
 	{
-		// Set default size
-		cgeom.verts.push_back(glm::vec3(-0.09f, 0.09f, 0.f));
-		cgeom.verts.push_back(glm::vec3(-0.09f, -0.09f, 0.f));
-		cgeom.verts.push_back(glm::vec3(0.09f, -0.09f, 0.f));
-		cgeom.verts.push_back(glm::vec3(-0.09f, 0.09f, 0.f));
-		cgeom.verts.push_back(glm::vec3(0.09f, -0.09f, 0.f));
-		cgeom.verts.push_back(glm::vec3(0.09f, 0.09f, 0.f));
+		
+		cgeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+		cgeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
+		cgeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+		cgeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+		cgeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+		cgeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
 
 		cgeom.texCoords.push_back(glm::vec2(0.f, 1.f));
 		cgeom.texCoords.push_back(glm::vec2(0.f, 0.f));
@@ -59,41 +59,14 @@ struct GameObject {
 
 	// Just testing to see if movement works
 	void update(glm::vec3 displacement, float direction){
-		CPU_Geometry newGeom;
-
-		// if ship would move out of bounds
-		bool goingOutOfBounds = false;
-		if (!goingOutOfBounds){
-			this->position += displacement;
-		}
-
-		glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.f), glm::radians(direction), glm::vec3(0.f, 0.f, 1.f));
-    	glm::vec3 newfacing = glm::vec3(rotationMatrix * glm::vec4(this->facing, 0.0f));
-
-		this->facing = newfacing;
-
-		std::cout << "Position: " << glm::to_string(this->position) << std::endl;
-		std::cout << "Facing: " << glm::to_string(this->facing) << std::endl;
-
-
-		newGeom = shipGeom(this->scale, this->position, this->facing);
 		
-		// add the newGeom verts to the GameObject by first deleting the old ones
-		// no need to add the texture coords since they don't change
-
-		this->cgeom.verts.clear();
-		for (int i = 0; i < 6; i++){
-			this->cgeom.verts.push_back(newGeom.verts[i]);
-		}
-
-		this->ggeom.setVerts(this->cgeom.verts);
-		this->ggeom.setTexCoords(this->cgeom.texCoords);
 	}
 };
 
 struct Parameters{
 	glm::vec3 displacement = {0.f,0.f,0.f};
 	float direction = 0.f;
+	glm::vec2 cursor = {0.f,0.f};
 };
 
 // EXAMPLE CALLBACKS
@@ -146,6 +119,11 @@ public:
 		cursor = normalize_T * normalize_S * cursor;
 
 		std::cout << cursor.x << " " << cursor.y << std::endl;
+
+		cursorPos.x = cursor.x;
+		cursorPos.y = cursor.y;
+
+		// Add direction logic set
 	}
 
 	Parameters getParameters(){
@@ -158,57 +136,24 @@ public:
 private:
 	ShaderProgram& shader;
 	Parameters playerInputs;
+
+	glm::vec2 cursorPos;
 };
 
-CPU_Geometry shipGeom(float scale, glm::vec3 center, glm::vec3 facing) {
+CPU_Geometry shipGeom() {
 	CPU_Geometry retGeom;
-
-	// default width & height = 0.18f
-
-	float halfWidth = 0.18f * 0.5f * scale; 
-	float halfHeight = 0.18f * 0.5f * scale;
-
-	// rotation angle wrt y-axis
-	float angle =  acos(glm::dot(glm::vec3(0.f,1.f,0.f), facing));
-
-	// vector from origin to the 4 corners of ship
-	glm::vec3 v0 = glm::vec3(-halfWidth, halfHeight,0.f) - glm::vec3(0.f,0.f,0.f);
-	glm::vec3 v1 = glm::vec3(-halfWidth, -halfHeight,0.f) - glm::vec3(0.f,0.f,0.f);
-	glm::vec3 v2 = glm::vec3(halfWidth, -halfHeight,0.f) - glm::vec3(0.f,0.f,0.f);
-	glm::vec3 v3 = glm::vec3(halfWidth, halfHeight,0.f) - glm::vec3(0.f,0.f,0.f);
-
-	// rotate the vectors by the rotation angle
-	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.f), angle, glm::vec3(0.f, 0.f, 1.f));
-
-	glm::vec3 v0prime = glm::vec3(rotationMatrix * glm::vec4(v0, 0.0f));
-	glm::vec3 v1prime = glm::vec3(rotationMatrix * glm::vec4(v1, 0.0f));
-	glm::vec3 v2prime = glm::vec3(rotationMatrix * glm::vec4(v2, 0.0f));
-	glm::vec3 v3prime = glm::vec3(rotationMatrix * glm::vec4(v3, 0.0f));
-
-	// get the point of the corners of the ship
-	glm::vec3 p0 = center + v0prime;
-	glm::vec3 p1 = center + v1prime;
-	glm::vec3 p2 = center + v2prime;
-	glm::vec3 p3 = center + v3prime;
-
-	retGeom.verts.push_back(p0);
-	retGeom.verts.push_back(p1);
-	retGeom.verts.push_back(p2);
-	retGeom.verts.push_back(p0);
-	retGeom.verts.push_back(p2);
-	retGeom.verts.push_back(p3);
 	
 	// vertices for the spaceship quad
 	// For full marks (Part IV), you'll need to use the following vertex coordinates instead.
 	// Then, you'd get the correct scale/translation/rotation by passing in uniforms into
 	// the vertex shader.
 	
-	// retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
-	// retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
-	// retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
-	// retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
-	// retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
-	// retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(-1.f, 1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, -1.f, 0.f));
+	retGeom.verts.push_back(glm::vec3(1.f, 1.f, 0.f));
 	
 
 	// texture coordinates
@@ -295,10 +240,7 @@ int main() {
 
 
 		// Recalculate ship position
-		if (direction_change != 0.f || !(displacement_change[0] == 0.f && displacement_change[1] == 0.f && displacement_change[2] == 0.f)){
-			ship.update(displacement_change, direction_change);
-		}
-
+		
 		ship.ggeom.setVerts(ship.cgeom.verts);
 		ship.ggeom.setTexCoords(ship.cgeom.texCoords);
 		diamond.ggeom.setVerts(diamond.cgeom.verts);
@@ -320,8 +262,8 @@ int main() {
 		ship.texture.unbind();
 
 		// // Then render the diamond
-		// diamond.ggeom.bind();
-		// diamond.texture.bind();
+		diamond.ggeom.bind();
+		diamond.texture.bind();
 
 		// // Here go the transformations
 		// /*
@@ -329,10 +271,10 @@ int main() {
 		// */
 
 		// // Draw diamond then unbind texture
-		// glDrawArrays(GL_TRIANGLES, 0, 6);
-		// diamond.texture.unbind();
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		diamond.texture.unbind();
 		
-		// glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
 		// Starting the new ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
