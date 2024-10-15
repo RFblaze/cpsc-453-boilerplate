@@ -221,6 +221,16 @@ int main() {
 	GameObject ship("textures/ship.png", GL_NEAREST);
 	GameObject diamond("textures/diamond.png", GL_NEAREST);
 
+	glm::mat4 T_ship = glm::translate(glm::mat4(1.f), glm::vec3(0.1f,0.1f,0.f));
+	glm::mat4 S_ship = glm::scale(glm::mat4(1.f), glm::vec3(0.18f, 0.18f, 0.f));
+	glm::mat4 R_ship = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	glm::mat4 M_ship = T_ship * R_ship * S_ship;
+
+	glm::mat4 T_diamond = glm::translate(glm::mat4(1.f), glm::vec3(-0.1f,-0.1f,0.f));
+	glm::mat4 S_diamond = glm::scale(glm::mat4(1.f), glm::vec3(0.18f, 0.18f, 0.f));
+	glm::mat4 R_diamond = glm::rotate(glm::mat4(1.f), glm::radians(50.f), glm::vec3(0.f,0.f,1.f));
+	glm::mat4 M_diamond = T_diamond * R_diamond * S_ship;
+
 	// RENDER LOOP
 	while (!window.shouldClose()) {
 		int score;
@@ -251,10 +261,7 @@ int main() {
 		ship.texture.bind();
 
 		// Here go the transformations
-		/*
-		
-		*/
-		
+		glUniformMatrix4fv(0,1,GL_FALSE, glm::value_ptr(M_ship));
 		
 		// Draw ship then unbind texture
 		glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -265,10 +272,13 @@ int main() {
 		diamond.ggeom.bind();
 		diamond.texture.bind();
 
-		// // Here go the transformations
-		// /*
+		// Here go the transformations
+		/*
 		
-		// */
+		*/
+		glUniformMatrix4fv(0,1,GL_FALSE, glm::value_ptr(M_diamond));
+
+		
 
 		// // Draw diamond then unbind texture
 		glDrawArrays(GL_TRIANGLES, 0, 6);
