@@ -112,18 +112,40 @@ public:
 				playerInputs.displacement += glm::vec3(0.f, 0.016f, 0.f);
 			}
 
-			if (key == GLFW_KEY_A){
-				playerInputs.direction -= 5.f;
-			}
-
 			if (key == GLFW_KEY_S){
-				playerInputs.displacement += glm::vec3(0.f, -.016f, 0.f);
-			}
-
-			if (key == GLFW_KEY_D){
-				playerInputs.direction += 5.f;
+				playerInputs.displacement += glm::vec3(0.f, -0.016f, 0.f);
 			}
 		}
+	}
+
+	virtual void cursorPosCallback(double xpos, double ypos) {
+		glm::vec4 cursor = {xpos, ypos, 0.f, 1.f};
+
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
+		
+		// translates by half a pixel for pixel center being considered for cursor position
+		glm::mat4 pixel_centering_T = glm::translate(glm::mat4(1.f), glm::vec3(0.5f,0.5f,0.f));
+		cursor = pixel_centering_T * cursor;
+
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
+		
+		// Scale coords down to 0-1
+		glm::mat4 zero_to_one_S = glm::scale(glm::mat4(1.f), glm::vec3(0.00125f, 0.00125f, 0.f));
+		cursor = zero_to_one_S * cursor;
+
+		std::cout << cursor.x << " " << cursor.y << std::endl;
+
+		// Turn y from 0-1 to -1 to 0 (since xpos and ypos record position as positive downward)
+		cursor.y = 1.f - cursor.y;
+
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
+
+		// Scale then Translate values to make them between -1 to 1
+		glm::mat4 normalize_S = glm::scale(glm::mat4(1.f), glm::vec3(2.f,2.f,0.f));
+		glm::mat4 normalize_T = glm::translate(glm::mat4(1.f), glm::vec3(-1.f,-1.f,0.f));
+		cursor = normalize_T * normalize_S * cursor;
+
+		std::cout << cursor.x << " " << cursor.y << std::endl;
 	}
 
 	Parameters getParameters(){
