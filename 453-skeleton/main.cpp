@@ -114,7 +114,6 @@ struct GameObject {
 			angle = 0.f;
 		}
 
-
 		// Compute translation changes
 		glm::vec3 displacement = user_input.displacement.y * this->facing; // Move in the facing direction
 
@@ -122,7 +121,7 @@ struct GameObject {
 		this->position += displacement;
 
 		// Change the transformation matrices
-		glm::mat4 added_S = glm::scale(glm::mat4(1.f), glm::vec3(1.f + counter * 0.25, 1.f + counter * 0.25, 1.f));
+		glm::mat4 added_S = glm::scale(glm::mat4(1.f), glm::vec3(1.f + counter * 0.1, 1.f + counter * 0.1, 1.f));
 		this->S_Matrix = added_S * this->S_Matrix;
 
 		glm::mat4 added_R = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,0.f,1.f));
@@ -216,6 +215,15 @@ private:
 	Parameters playerInputs;
 };
 
+bool isDiamondCollected(glm::vec3* shipPos, glm::vec3* diamondPos){
+	float distance = glm::length(*shipPos - *diamondPos);
+
+	if (distance <= 0.075){
+		return true;
+	}
+	return false;
+}
+
 int main() {
 	Log::debug("Starting main");
 
@@ -252,6 +260,7 @@ int main() {
 
 	int score = 0;
 	bool start = false;
+	int maxScore = uncollectedDiamonds.size();
 
 	glm::vec3 curr_cursorPos = {-2.f,-2.f,0.f};
 	glm::vec3 curr_displacement = {0.f,0.f,0.f};
@@ -261,6 +270,10 @@ int main() {
 		
 		Parameters user_input = callback->getParameters();
 
+		if (user_input.displacement != glm::vec3(0.f,0.f,0.f)){
+			start = true;
+		}
+
 		glfwPollEvents();
 
 		shader.use();
@@ -269,10 +282,48 @@ int main() {
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		ship.updateShip(user_input, 0);
-		
-		
-		
+
+		std::vector<int> collectedIndices = std::vector<int>();
+		int newlyCollected = 0;
+		// Then render the diamonds
+		for (int i = 0; i < uncollectedDiamonds.size(); i++){
+
+			auto curr = uncollectedDiamonds.at(i);
+
+			
+
+			(*curr).ggeom.bind();
+			(*curr).texture.bind();
+
+			(*curr).updateDiamondPosition();
+
+			if (isDiamondCollected(&(ship.position), &((*curr).position)) && start){
+				newlyCollected += 1;
+				score += 1;
+				collectedIndices.push_back(i);
+			}
+			else{
+				// Here go the transformations
+				glm::mat4 M_diamond = (*curr).getTransformationMatrix();
+				glUniformMatrix4fv(0,1,GL_FALSE, glm::value_ptr(M_diamond));
+
+				
+
+				// // Draw diamond then unbind texture
+				glDrawArrays(GL_TRIANGLES, 0, 6);
+				(*curr).texture.unbind();
+			}
+		}
+
+		for (int i = 0; i <collectedIndices.size(); i++){
+			uncollectedDiamonds.erase(std::remove(uncollectedDiamonds.begin(), uncollectedDiamonds.end(), uncollectedDiamonds.at(collectedIndices.at(i))), uncollectedDiamonds.end());
+		}
+
+
+
+		// Draw ship
+
+		ship.updateShip(user_input, newlyCollected);
 		
 		ship.ggeom.setVerts(ship.cgeom.verts);
 		ship.ggeom.setTexCoords(ship.cgeom.texCoords);
@@ -291,26 +342,6 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		
 		ship.texture.unbind();
-
-		// Then render the diamonds
-		for (int i = 0; i < uncollectedDiamonds.size(); i++){
-			auto curr = uncollectedDiamonds.at(i);
-
-			(*curr).ggeom.bind();
-			(*curr).texture.bind();
-
-			// (*curr).updateDiamondPosition();
-
-			// Here go the transformations
-			glm::mat4 M_diamond = (*curr).getTransformationMatrix();
-			glUniformMatrix4fv(0,1,GL_FALSE, glm::value_ptr(M_diamond));
-
-			
-
-			// // Draw diamond then unbind texture
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			(*curr).texture.unbind();
-		}
 		
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
@@ -337,7 +368,13 @@ int main() {
 
 		// Scale up text a little, and set its value
 		ImGui::SetWindowFontScale(1.5f);
-		ImGui::Text("Score: %d", score); // Second parameter gets passed into "%d"
+		if (score == maxScore){
+			ImGui::Text("You win!\nScore: %d", score);
+		}
+		else{
+			ImGui::Text("Score: %d", score); // Second parameter gets passed into "%d"
+		}
+		
 
 		// End the window.
 		ImGui::End();
