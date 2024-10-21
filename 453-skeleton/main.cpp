@@ -17,9 +17,10 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include <glm/gtc/type_ptr.hpp>
 
+// -2.f is a sentinel value to indicate no change
 struct Parameters{
 	glm::vec3 displacement = {0.f,0.f,0.f};
-	glm::vec3 cursorPos = {0.f,0.f,0.f};
+	glm::vec3 cursorPos = {-2.f,-2.f,0.f};
 };
 
 // An example struct for Game Objects.
@@ -53,7 +54,6 @@ struct GameObject {
 	}
 
 	// Diamond Constructor
-	// FIXME: pos must be set to the T_Matrix
 	GameObject(std::string texturePath, GLenum textureInterpolation, glm::vec3 pos, glm::vec3 face) :
 		texture(texturePath, textureInterpolation),
 		position(pos),
@@ -75,7 +75,7 @@ struct GameObject {
 		cgeom.texCoords.push_back(glm::vec2(1.f, 1.f));
 
 		S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3(default_diamond_size, default_diamond_size, 0.f));
-		T_Matrix = glm::translate(glm::mat4(1.f), glm::vec3(0.f,0.f,0.f));
+		T_Matrix = glm::translate(glm::mat4(1.f), pos);
 		R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
 	}
 
@@ -84,7 +84,7 @@ struct GameObject {
 	Texture texture;
 
 	float default_ship_size = 0.18f;
-	float default_diamond_size = 0.18f;
+	float default_diamond_size = 0.12f;
 
 	glm::vec3 position;
 	glm::vec3 facing;
@@ -98,23 +98,28 @@ struct GameObject {
 	}
 
 	void updateShip(Parameters user_input, int counter){
-		// Compute changes
-		glm::vec3 mustFace = user_input.cursorPos - this->position;
-		glm::vec3 face_uvector = mustFace / float(mustFace.length());
+		// Compute rotation changes
 
-		// Compute the change in position in the direction of the ship's current facing vector
+		float angle;
+		// If the cursor moved
+		if (user_input.cursorPos != glm::vec3(-2.f,-2.f,0.f)){
+			glm::vec3 mustFace = user_input.cursorPos - this->position;
+			glm::vec3 face_uvector = glm::normalize(mustFace);
+
+			angle = acos(glm::dot(this->facing, face_uvector));
+
+			this->facing = face_uvector;
+		}
+		else{
+			angle = 0.f;
+		}
+
+
+		// Compute translation changes
 		glm::vec3 displacement = user_input.displacement.y * this->facing; // Move in the facing direction
 
 		// Update position
 		this->position += displacement;
-
-		float angle = acos(glm::dot(this->facing, face_uvector));
-
-		glm::vec3 posChange = this->position + (face_uvector * user_input.displacement);
-
-
-		// Apply changes to ship object data members
-		this->facing = face_uvector;
 
 		// Change the transformation matrices
 		glm::mat4 added_S = glm::scale(glm::mat4(1.f), glm::vec3(1.f + counter * 0.25, 1.f + counter * 0.25, 1.f));
@@ -123,7 +128,7 @@ struct GameObject {
 		glm::mat4 added_R = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,0.f,1.f));
 		this->R_matrix = added_R * this->R_matrix;
 
-		glm::mat4 added_T = glm::translate(glm::mat4(1.0f), posChange);
+		glm::mat4 added_T = glm::translate(glm::mat4(1.0f), displacement);
 		this->T_Matrix = added_T * this->T_Matrix;
 		
 	}
@@ -198,7 +203,12 @@ public:
 	}
 
 	Parameters getParameters(){
-		return playerInputs;
+		Parameters ret = playerInputs;
+
+		playerInputs.displacement = {0.f,0.f,0.f};
+		playerInputs.cursorPos = {-2.f,-2.f,0.f};
+
+		return ret;
 	}
 
 private:
@@ -226,22 +236,25 @@ int main() {
 	// GL_NEAREST looks a bit better for low-res pixel art than GL_LINEAR.
 	// But for most other cases, you'd want GL_LINEAR interpolation.
 	GameObject ship("textures/ship.png", GL_NEAREST);
-	GameObject diamond1("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,0.f,0.f), glm::vec3(0.5f,0.25f,0.f));
-	// GameObject diamond2("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,0.f,0.f), glm::vec3(0.5f,0.5f,0.f));
-	// GameObject diamond3("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,0.f,0.f), glm::vec3(0.5f,0.5f,0.f));
-	// GameObject diamond4("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,0.f,0.f), glm::vec3(0.5f,0.5f,0.f));
-	// GameObject diamond5("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,0.f,0.f), glm::vec3(0.5f,0.5f,0.f));
+	GameObject diamond1("textures/diamond.png", GL_NEAREST, glm::vec3(1.0f,0.f,0.f), glm::vec3(0.5f,0.25f,0.f));
+	GameObject diamond2("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,1.f,0.f), glm::vec3(0.25f,0.5f,0.f));
+	GameObject diamond3("textures/diamond.png", GL_NEAREST, glm::vec3(-1.0f,0.f,0.f), glm::vec3(-0.5f,-0.5f,0.f));
+	GameObject diamond4("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,-1.f,0.f), glm::vec3(-0.15f,0.35f,0.f));
+	GameObject diamond5("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,0.f,0.f), glm::vec3(0.5f,-0.5f,0.f));
 
 
-	// std::vector<GameObject> uncollectedDiamonds = std::vector<GameObject>();
-	// uncollectedDiamonds.push_back(diamond1);
-	// uncollectedDiamonds.push_back(diamond2);
-	// uncollectedDiamonds.push_back(diamond3);
-	// uncollectedDiamonds.push_back(diamond4);
-	// uncollectedDiamonds.push_back(diamond5);
+	std::vector<GameObject*> uncollectedDiamonds = std::vector<GameObject*>();
+	uncollectedDiamonds.push_back(&diamond1);
+	uncollectedDiamonds.push_back(&diamond2);
+	uncollectedDiamonds.push_back(&diamond3);
+	uncollectedDiamonds.push_back(&diamond4);
+	uncollectedDiamonds.push_back(&diamond5);
 
 	int score = 0;
 	bool start = false;
+
+	glm::vec3 curr_cursorPos = {-2.f,-2.f,0.f};
+	glm::vec3 curr_displacement = {0.f,0.f,0.f};
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
@@ -256,14 +269,10 @@ int main() {
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// ship.updateShip(user_input, 0);
-		// // Get the user input details
-		// glm::vec2 cursorPos = user_input.cursorPos;
-		// glm::vec3 displacement_change = user_input.displacement;
-
-		// // Recalculate ship position (this is erroneous because it does not consider rotation #FIXME)
-		// ship.T_Matrix = glm::translate(glm::mat4(1.f), displacement_change);
-		// ship.position = displacement_change;
+		ship.updateShip(user_input, 0);
+		
+		
+		
 		
 		ship.ggeom.setVerts(ship.cgeom.verts);
 		ship.ggeom.setTexCoords(ship.cgeom.texCoords);
@@ -284,20 +293,24 @@ int main() {
 		ship.texture.unbind();
 
 		// Then render the diamonds
-		diamond1.ggeom.bind();
-		diamond1.texture.bind();
+		for (int i = 0; i < uncollectedDiamonds.size(); i++){
+			auto curr = uncollectedDiamonds.at(i);
 
-		diamond1.updateDiamondPosition();
+			(*curr).ggeom.bind();
+			(*curr).texture.bind();
 
-		// Here go the transformations
-		glm::mat4 M_diamond = diamond1.getTransformationMatrix();
-		glUniformMatrix4fv(0,1,GL_FALSE, glm::value_ptr(M_diamond));
+			// (*curr).updateDiamondPosition();
 
-		
+			// Here go the transformations
+			glm::mat4 M_diamond = (*curr).getTransformationMatrix();
+			glUniformMatrix4fv(0,1,GL_FALSE, glm::value_ptr(M_diamond));
 
-		// // Draw diamond then unbind texture
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		diamond1.texture.unbind();
+			
+
+			// // Draw diamond then unbind texture
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+			(*curr).texture.unbind();
+		}
 		
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
