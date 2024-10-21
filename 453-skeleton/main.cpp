@@ -130,9 +130,8 @@ struct GameObject {
 		
 
 		// Change the transformation matrices
-		if (glm::determinant(this->S_Matrix) < 0.01f || glm::determinant(this->S_Matrix) > 100.f) {
-			this->S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3(default_ship_size, default_ship_size, 1.f));
-		}
+		glm::mat4 added_S = glm::scale(glm::mat4(1.f), glm::vec3(1.f + counter * 0.1, 1.f + counter * 0.1, 1.f));
+		this->S_Matrix = added_S * this->S_Matrix;
 
 		// Update the rotation matrix
 		glm::mat4 added_R = glm::rotate(glm::mat4(1.f), angle, glm::vec3(0.f,0.f,1.f));
@@ -141,12 +140,14 @@ struct GameObject {
 	}
 
 	void updateDiamondPosition(){
-		// check if going out of bounds
-		if (abs((this->position + this->facing).x) >= 1.0f || abs((this->position + this->facing).y) >= 1.0f){
+		glm::vec3 displacement = this->facing * 0.015f;
+		// if not going out of bounds, proceed. else reverse direction
+		if (!(abs((this->position + displacement).x) >= 1.0f || abs((this->position + displacement).y) >= 1.0f)){
+			this->position += displacement;
+		}
+		else {
 			this->facing = -this->facing;
 		}
-		glm::vec3 displacement = this->facing * 0.015f;
-		this->position += displacement;
 
 		glm::mat4 added_T = glm::translate(glm::mat4(1.f), displacement);
 		this->T_Matrix = added_T * this->T_Matrix;
@@ -179,7 +180,7 @@ public:
 	virtual void cursorPosCallback(double xpos, double ypos) {
 		glm::vec4 cursor = {xpos, ypos, 0.f, 1.f};
 
-		// std::cout << cursor.x << " " << cursor.y << std::endl;
+		std::cout << cursor.x << " " << cursor.y << std::endl;
 		
 		// translates by half a pixel for pixel center being considered for cursor position
 		glm::mat4 pixel_centering_T = glm::translate(glm::mat4(1.f), glm::vec3(0.5f,0.5f,0.f));
@@ -191,7 +192,7 @@ public:
 		glm::mat4 zero_to_one_S = glm::scale(glm::mat4(1.f), glm::vec3(0.00125f, 0.00125f, 0.f));
 		cursor = zero_to_one_S * cursor;
 
-		std::cout << cursor.x << " " << cursor.y << std::endl;
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
 
 		// Turn y from 0-1 to -1 to 0 (since xpos and ypos record position as positive downward)
 		cursor.y = 1.f - cursor.y;
@@ -203,7 +204,7 @@ public:
 		glm::mat4 normalize_T = glm::translate(glm::mat4(1.f), glm::vec3(-1.f,-1.f,0.f));
 		cursor = normalize_T * normalize_S * cursor;
 
-		std::cout << cursor.x << " " << cursor.y << std::endl;
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
 
 		playerInputs.cursorPos.x = cursor.x;
 		playerInputs.cursorPos.y = cursor.y;
@@ -294,7 +295,7 @@ int main() {
 		std::vector<int> collectedIndices = std::vector<int>();
 		int newlyCollected = 0;
 		// Then render the diamonds
-		for (int i = 0; i < uncollectedDiamonds.size(); i++){
+		for (int i = 0; i < int(uncollectedDiamonds.size()); i++){
 
 			auto curr = uncollectedDiamonds.at(i);
 
@@ -327,7 +328,7 @@ int main() {
 			}
 		}
 
-		for (int i = 0; i <collectedIndices.size(); i++){
+		for (int i = 0; i < int(collectedIndices.size()); i++){
 			uncollectedDiamonds.erase(std::remove(uncollectedDiamonds.begin(), uncollectedDiamonds.end(), uncollectedDiamonds.at(collectedIndices.at(i))), uncollectedDiamonds.end());
 		}
 
