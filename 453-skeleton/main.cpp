@@ -290,8 +290,6 @@ int main() {
 
 			auto curr = uncollectedDiamonds.at(i);
 
-			
-
 			(*curr).ggeom.bind();
 			(*curr).texture.bind();
 
@@ -303,6 +301,12 @@ int main() {
 				collectedIndices.push_back(i);
 			}
 			else{
+
+				(*curr).ggeom.setVerts((*curr).cgeom.verts);
+				(*curr).ggeom.setTexCoords((*curr).cgeom.texCoords);
+
+				(*curr).ggeom.bind();
+				(*curr).texture.bind();
 				// Here go the transformations
 				glm::mat4 M_diamond = (*curr).getTransformationMatrix();
 				glUniformMatrix4fv(0,1,GL_FALSE, glm::value_ptr(M_diamond));
@@ -327,8 +331,6 @@ int main() {
 		
 		ship.ggeom.setVerts(ship.cgeom.verts);
 		ship.ggeom.setTexCoords(ship.cgeom.texCoords);
-		diamond1.ggeom.setVerts(diamond1.cgeom.verts);
-		diamond1.ggeom.setTexCoords(diamond1.cgeom.texCoords);
 
 		// First render the ship
 		ship.ggeom.bind();
