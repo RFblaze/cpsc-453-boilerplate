@@ -106,8 +106,10 @@ struct GameObject {
 			glm::vec3 mustFace = user_input.cursorPos - this->position;
 			glm::vec3 face_uvector = glm::normalize(mustFace);
 
-			angle = acos(glm::dot(this->facing, face_uvector));
+			// Compute the signed angle using atan2
+			angle = atan2(face_uvector.y, face_uvector.x) - atan2(facing.y, facing.x);
 
+			// Update facing direction
 			this->facing = face_uvector;
 		}
 		else{
@@ -117,18 +119,24 @@ struct GameObject {
 		// Compute translation changes
 		glm::vec3 displacement = user_input.displacement.y * this->facing; // Move in the facing direction
 
-		// Update position
-		this->position += displacement;
+		// Update position if not going out of bounds
+		if (!(abs((this->position + displacement).x) >= 1.0f || abs((this->position + displacement).y) >= 1.0f)){
+			this->position += displacement;
+
+			glm::mat4 added_T = glm::translate(glm::mat4(1.0f), displacement);
+			this->T_Matrix = added_T * this->T_Matrix;
+		}
+
+		
 
 		// Change the transformation matrices
-		glm::mat4 added_S = glm::scale(glm::mat4(1.f), glm::vec3(1.f + counter * 0.1, 1.f + counter * 0.1, 1.f));
-		this->S_Matrix = added_S * this->S_Matrix;
+		if (glm::determinant(this->S_Matrix) < 0.01f || glm::determinant(this->S_Matrix) > 100.f) {
+			this->S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3(default_ship_size, default_ship_size, 1.f));
+		}
 
-		glm::mat4 added_R = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,0.f,1.f));
+		// Update the rotation matrix
+		glm::mat4 added_R = glm::rotate(glm::mat4(1.f), angle, glm::vec3(0.f,0.f,1.f));
 		this->R_matrix = added_R * this->R_matrix;
-
-		glm::mat4 added_T = glm::translate(glm::mat4(1.0f), displacement);
-		this->T_Matrix = added_T * this->T_Matrix;
 		
 	}
 
