@@ -107,7 +107,7 @@ struct GameObject {
 		// Compute rotation changes
 		float angle;
 		glm::vec3 mustFace = user_input.cursorPos - this->position;
-		std::cout << mustFace.x << " " << mustFace.y << std::endl;
+		
 		if ( (mustFace.x * mustFace.x + mustFace.y * mustFace.y)  > 0.001){
 			glm::vec3 face_uvector = glm::normalize(mustFace);
 			
