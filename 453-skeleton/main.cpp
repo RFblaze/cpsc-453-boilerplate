@@ -21,6 +21,7 @@
 struct Parameters{
 	glm::vec3 displacement = {0.f,0.f,0.f};
 	glm::vec3 cursorPos = {-2.f,-2.f,0.f};
+	bool resetFlag = false;
 };
 
 // An example struct for Game Objects.
@@ -169,7 +170,7 @@ public:
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) {
 		if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-			shader.recompile();
+			playerInputs.resetFlag = true;
 		}
 
 		if (action == GLFW_PRESS || action == GLFW_REPEAT){
@@ -221,6 +222,7 @@ public:
 
 		playerInputs.displacement = {0.f,0.f,0.f};
 		playerInputs.cursorPos = {-2.f,-2.f,0.f};
+		playerInputs.resetFlag = false;
 
 		return ret;
 	}
@@ -237,6 +239,65 @@ bool isDiamondCollected(glm::vec3* shipPos, glm::vec3* diamondPos){
 		return true;
 	}
 	return false;
+}
+
+void resetGame(GameObject* ship, std::vector<GameObject*>* uncollectedDiamondsBase, std::vector<GameObject*>* uncollectedDiamonds){
+	// Reset ship
+	(*ship).position = glm::vec3(0.f,0.f,0.f);
+	(*ship).facing = glm::vec3(0.f,1.f,0.f);
+
+	(*ship).S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3((*ship).default_ship_size, (*ship).default_ship_size, 0.f));
+	(*ship).R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	(*ship).T_Matrix = glm::translate(glm::mat4(1.f), glm::vec3(0.f,0.f,0.f));
+
+	// Reset Diamonds
+	for (int i = 0; i < int((*uncollectedDiamondsBase).size()); i++){
+		GameObject* addingDiamond = (*uncollectedDiamondsBase)[i];
+
+		bool add = true;
+		for (int j = 0; j < int((*uncollectedDiamonds).size()); j++){
+			if ((*uncollectedDiamonds)[j] == addingDiamond){
+				add = false;
+				break;
+			}
+		}
+
+		if (add){
+			uncollectedDiamonds->push_back(addingDiamond);
+		}
+	}
+
+	// Reseting the individual diamond transforms
+	(*uncollectedDiamonds)[0]->position = glm::vec3(1.0f,0.f,0.f);
+	(*uncollectedDiamonds)[0]->facing = glm::vec3(0.5f,0.25f,0.f);
+	(*uncollectedDiamonds)[0]->S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3((*uncollectedDiamonds)[0]->default_diamond_size, (*uncollectedDiamonds)[0]->default_diamond_size, 0.f));
+	(*uncollectedDiamonds)[0]->R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	(*uncollectedDiamonds)[0]->T_Matrix = glm::translate(glm::mat4(1.f), (*uncollectedDiamonds)[0]->position);
+
+	(*uncollectedDiamonds)[1]->position = glm::vec3(0.0f,1.f,0.f);
+	(*uncollectedDiamonds)[1]->facing = glm::vec3(0.25f,0.5f,0.f);
+	(*uncollectedDiamonds)[1]->S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3((*uncollectedDiamonds)[0]->default_diamond_size, (*uncollectedDiamonds)[0]->default_diamond_size, 0.f));
+	(*uncollectedDiamonds)[1]->R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	(*uncollectedDiamonds)[1]->T_Matrix = glm::translate(glm::mat4(1.f), (*uncollectedDiamonds)[1]->position);
+
+	(*uncollectedDiamonds)[2]->position = glm::vec3(-1.0f,0.f,0.f);
+	(*uncollectedDiamonds)[2]->facing = glm::vec3(-0.5f,-0.5f,0.f);
+	(*uncollectedDiamonds)[2]->S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3((*uncollectedDiamonds)[0]->default_diamond_size, (*uncollectedDiamonds)[0]->default_diamond_size, 0.f));
+	(*uncollectedDiamonds)[2]->R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	(*uncollectedDiamonds)[2]->T_Matrix = glm::translate(glm::mat4(1.f), (*uncollectedDiamonds)[2]->position);
+
+	(*uncollectedDiamonds)[3]->position = glm::vec3(0.0f,-1.f,0.f);
+	(*uncollectedDiamonds)[3]->facing = glm::vec3(-0.15f,0.35f,0.f);
+	(*uncollectedDiamonds)[3]->S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3((*uncollectedDiamonds)[0]->default_diamond_size, (*uncollectedDiamonds)[0]->default_diamond_size, 0.f));
+	(*uncollectedDiamonds)[3]->R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	(*uncollectedDiamonds)[3]->T_Matrix = glm::translate(glm::mat4(1.f), (*uncollectedDiamonds)[3]->position);
+
+	(*uncollectedDiamonds)[4]->position = glm::vec3(0.0f,0.f,0.f);
+	(*uncollectedDiamonds)[4]->facing = glm::vec3(0.5f,-0.5f,0.f);
+	(*uncollectedDiamonds)[4]->S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3((*uncollectedDiamonds)[0]->default_diamond_size, (*uncollectedDiamonds)[0]->default_diamond_size, 0.f));
+	(*uncollectedDiamonds)[4]->R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	(*uncollectedDiamonds)[4]->T_Matrix = glm::translate(glm::mat4(1.f), (*uncollectedDiamonds)[4]->position);
+
 }
 
 int main() {
@@ -265,6 +326,12 @@ int main() {
 	GameObject diamond4("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,-1.f,0.f), glm::vec3(-0.15f,0.35f,0.f));
 	GameObject diamond5("textures/diamond.png", GL_NEAREST, glm::vec3(0.0f,0.f,0.f), glm::vec3(0.5f,-0.5f,0.f));
 
+	std::vector<GameObject*> uncollectedDiamondsBase = std::vector<GameObject*>();
+	uncollectedDiamondsBase.push_back(&diamond1);
+	uncollectedDiamondsBase.push_back(&diamond2);
+	uncollectedDiamondsBase.push_back(&diamond3);
+	uncollectedDiamondsBase.push_back(&diamond4);
+	uncollectedDiamondsBase.push_back(&diamond5);
 
 	std::vector<GameObject*> uncollectedDiamonds = std::vector<GameObject*>();
 	uncollectedDiamonds.push_back(&diamond1);
@@ -284,6 +351,12 @@ int main() {
 	while (!window.shouldClose()) {
 		
 		Parameters user_input = callback->getParameters();
+
+		if (user_input.resetFlag){
+			resetGame(&ship, &uncollectedDiamondsBase, &uncollectedDiamonds);
+			score = 0;
+			start = false;
+		}
 
 		if (user_input.displacement != glm::vec3(0.f,0.f,0.f)){
 			start = true;
