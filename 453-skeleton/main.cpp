@@ -17,10 +17,9 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include <glm/gtc/type_ptr.hpp>
 
-// -2.f is a sentinel value to indicate no change
 struct Parameters{
 	glm::vec3 displacement = {0.f,0.f,0.f};
-	glm::vec3 cursorPos = {-2.f,-2.f,0.f};
+	glm::vec3 cursorPos = {0.f,1.f,0.f};
 	bool resetFlag = false;
 };
 
@@ -106,22 +105,15 @@ struct GameObject {
 
 	void updateShip(Parameters user_input, int counter){
 		// Compute rotation changes
-
 		float angle;
-		// If the cursor moved
-		if (user_input.cursorPos != glm::vec3(-2.f,-2.f,0.f)){
-			glm::vec3 mustFace = user_input.cursorPos - this->position;
-			glm::vec3 face_uvector = glm::normalize(mustFace);
+		glm::vec3 mustFace = user_input.cursorPos - this->position;
+		glm::vec3 face_uvector = glm::normalize(mustFace);
+		
+		// Compute the signed angle using atan2
+		angle = atan2(face_uvector.y, face_uvector.x) - atan2(facing.y, facing.x);
 
-			// Compute the signed angle using atan2
-			angle = atan2(face_uvector.y, face_uvector.x) - atan2(facing.y, facing.x);
-
-			// Update facing direction
-			this->facing = face_uvector;
-		}
-		else{
-			angle = 0.f;
-		}
+		// Update facing direction
+		this->facing = face_uvector;
 
 		// Compute translation changes
 		glm::vec3 displacement = user_input.displacement.y * this->facing; // Move in the facing direction
@@ -171,6 +163,7 @@ public:
 	virtual void keyCallback(int key, int scancode, int action, int mods) {
 		if (key == GLFW_KEY_R && action == GLFW_PRESS) {
 			playerInputs.resetFlag = true;
+			playerInputs.cursorPos = glm::vec3(0.f,1.f,0.f);
 		}
 
 		if (action == GLFW_PRESS || action == GLFW_REPEAT){
@@ -187,7 +180,7 @@ public:
 	virtual void cursorPosCallback(double xpos, double ypos) {
 		glm::vec4 cursor = {xpos, ypos, 0.f, 1.f};
 
-		std::cout << cursor.x << " " << cursor.y << std::endl;
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
 		
 		// translates by half a pixel for pixel center being considered for cursor position
 		glm::mat4 pixel_centering_T = glm::translate(glm::mat4(1.f), glm::vec3(0.5f,0.5f,0.f));
@@ -221,7 +214,6 @@ public:
 		Parameters ret = playerInputs;
 
 		playerInputs.displacement = {0.f,0.f,0.f};
-		playerInputs.cursorPos = {-2.f,-2.f,0.f};
 		playerInputs.resetFlag = false;
 
 		return ret;
@@ -343,9 +335,6 @@ int main() {
 	int score = 0;
 	bool start = false;
 	int maxScore = uncollectedDiamonds.size();
-
-	glm::vec3 curr_cursorPos = {-2.f,-2.f,0.f};
-	glm::vec3 curr_displacement = {0.f,0.f,0.f};
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
