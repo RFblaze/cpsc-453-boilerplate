@@ -47,10 +47,13 @@ struct GameObject {
 		cgeom.texCoords.push_back(glm::vec2(1.f, 0.f));
 		cgeom.texCoords.push_back(glm::vec2(1.f, 1.f));
 
+		ggeom.setVerts(cgeom.verts);
+		ggeom.setTexCoords(cgeom.texCoords);
+
 		S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3(default_ship_size, default_ship_size, 0.f));
 		T_Matrix = glm::translate(glm::mat4(1.f), glm::vec3(0.f,0.f,0.f));
 		R_matrix = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
-
+		
 	}
 
 	// Diamond Constructor
@@ -73,6 +76,9 @@ struct GameObject {
 		cgeom.texCoords.push_back(glm::vec2(0.f, 1.f));
 		cgeom.texCoords.push_back(glm::vec2(1.f, 0.f));
 		cgeom.texCoords.push_back(glm::vec2(1.f, 1.f));
+
+		ggeom.setVerts(cgeom.verts);
+		ggeom.setTexCoords(cgeom.texCoords);
 
 		S_Matrix = glm::scale(glm::mat4(1.f), glm::vec3(default_diamond_size, default_diamond_size, 0.f));
 		T_Matrix = glm::translate(glm::mat4(1.f), pos);
@@ -310,10 +316,6 @@ int main() {
 				collectedIndices.push_back(i);
 			}
 			else{
-
-				(*curr).ggeom.setVerts((*curr).cgeom.verts);
-				(*curr).ggeom.setTexCoords((*curr).cgeom.texCoords);
-
 				(*curr).ggeom.bind();
 				(*curr).texture.bind();
 				// Here go the transformations
@@ -338,8 +340,7 @@ int main() {
 
 		ship.updateShip(user_input, newlyCollected);
 		
-		ship.ggeom.setVerts(ship.cgeom.verts);
-		ship.ggeom.setTexCoords(ship.cgeom.texCoords);
+		
 
 		// First render the ship
 		ship.ggeom.bind();
