@@ -6,7 +6,6 @@
 
 #include "Log.h"
 
-
 ShaderProgram::ShaderProgram(const std::string& vertexPath, const std::string& fragmentPath)
 	: programID()
 	, vertex(vertexPath, GL_VERTEX_SHADER)
@@ -53,11 +52,18 @@ bool ShaderProgram::checkAndLogLinkSuccess() const {
 		std::vector<char> log(logLength);
 		glGetProgramInfoLog(programID, logLength, NULL, log.data());
 
-		Log::error("SHADER_PROGRAM linking {} + {}:\n{}", vertex.getPath(), fragment.getPath(), log.data());
+		Log::error("SHADER_PROGRAM linking {} + {}:\n{}",
+			  vertex.getPath()
+			, fragment.getPath()
+			, log.data()
+		);
 		return false;
 	}
 	else {
-		Log::info("SHADER_PROGRAM successfully compiled and linked {} + {}", vertex.getPath(), fragment.getPath());
+		Log::info("SHADER_PROGRAM successfully compiled and linked {} + {}",
+			  vertex.getPath()
+			, fragment.getPath()
+		);
 		return true;
 	}
 }

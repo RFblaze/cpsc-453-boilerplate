@@ -1,6 +1,6 @@
 #pragma once
-#include <glad/glad.h>
 
+#include <glad/glad.h>
 //------------------------------------------------------------------------------
 // OpenGL has a mechanism where you can turn on debug mode and it will tell you
 // all sorts of fun stuff about what you're doing.

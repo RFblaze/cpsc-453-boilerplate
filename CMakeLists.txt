@@ -17,7 +17,9 @@ include_directories(SYSTEM thirdparty/argh-1.3.1/)
 
 #-------------------------------------------------------------------------------
 # https://glad.dav1d.de/
-add_subdirectory(thirdparty/glad)
+add_subdirectory(thirdparty/glad-opengl-3.3-core)
+# This is needed for Bonus 3 to access the optional shader stages (Possibly won't work on MacOS)
+#add_subdirectory(thirdparty/glad-opengl-4.6-core) 
 set(LIBRARIES ${LIBRARIES} glad)
 
 #-------------------------------------------------------------------------------
@@ -28,7 +30,7 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-add_subdirectory(thirdparty/glfw-3.3.2)
+add_subdirectory(thirdparty/glfw-3.4)
 set(LIBRARIES ${LIBRARIES} glfw)
 
 #-------------------------------------------------------------------------------
@@ -42,13 +44,26 @@ include_directories(SYSTEM thirdparty/glm-0.9.9.7/)
 
 #-------------------------------------------------------------------------------
 # https://fmt.dev/latest/index.html
-# Turn off building their tests
 set(FMT_TES OFF CACHE BOOL "" FORCE)
-add_subdirectory(thirdparty/fmt-7.0.3)
+add_subdirectory(thirdparty/fmt-11.0.2)
 set(LIBRARIES ${LIBRARIES} fmt::fmt)
 include_directories(SYSTEM thirdparty/fmt-7.0.3/include)
 
+#-------------------------------------------------------------------------------
+include_directories(SYSTEM thirdparty/stb-2.26)
 
+#-------------------------------------------------------------------------------
+#https://github.com/ocornut/imgui/tree/v1.91.4-docking
+add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD=ON)
+include_directories(SYSTEM thirdparty/imgui-1.91.4-docking)
+set(IMGUI_CPP_FILES
+	thirdparty/imgui-1.91.4-docking/*.cpp # All main files need to be compiled
+	thirdparty/imgui-1.91.4-docking/backends/imgui_impl_opengl3.cpp # OpenGL API >=3.0 
+	thirdparty/imgui-1.91.4-docking/backends/imgui_impl_glfw.cpp # Window Library comp.
+	thirdparty/imgui-1.91.4-docking/misc/cpp/imgui_stdlib.cpp # Allow string inputs
+)
+
+#-------------------------------------------------------------------------------
 find_package(OpenGL REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${OPENGL_gl_LIBRARY})
 
@@ -57,7 +72,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-Wall" "-pedantic")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	# using GCC
-	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-fdiagnostics-color=always" "-Wall" "-pedantic" "-Wconversion")
+	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-fdiagnostics-color=always" "-Wall" "-pedantic")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 	# using Intel C++
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
@@ -74,26 +89,20 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
 endif()
 
-if(UNIX)
+if(APPLE)
+	set(LIBRARIES ${LIBRARIES} pthread dl)
+elseif(UNIX)
 	set(LIBRARIES ${LIBRARIES} pthread GL dl)
-endif(UNIX)
-if (WIN32)
+elseif(WIN32)
 endif()
-
-
-# add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD=ON)
-# include_directories(SYSTEM thirdparty/imgui thirdparty/imgui/examples)
-# include_directories(src)
-
 
 # Compile our main application
 file(GLOB SOURCES
     453-skeleton/*
+	${IMGUI_CPP_FILES}
 )
 set(INCLUDES ${INCLUDES} src)
-
 set(APP_NAME "453-skeleton")
-
 
 # Copy all the shaders and tell the build system to re-run CMAKE if one of them changes
 file(GLOB files 453-skeleton/shaders/*)

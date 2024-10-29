@@ -4,7 +4,6 @@
 
 #include <glad/glad.h>
 
-
 class VertexArray {
 
 public:

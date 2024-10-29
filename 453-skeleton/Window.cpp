@@ -1,6 +1,9 @@
 #include "Window.h"
 
 #include "Log.h"
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 
 #include <iostream>
 
@@ -11,33 +14,80 @@
 
 void Window::keyMetaCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	CallbackInterface* callbacks = static_cast<CallbackInterface*>(glfwGetWindowUserPointer(window));
-	callbacks->keyCallback(key, scancode, action, mods);
+
+	bool forward_to_user_callback = true;
+	// Forward the key event to ImGui
+	if (ImGui::GetCurrentContext()) {
+		ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+		forward_to_user_callback = !ImGui::GetIO().WantCaptureKeyboard;
+	}
+
+	// If ImGui doesn't want to capture the keyboard, call the user-defined callback
+	if (forward_to_user_callback && callbacks) {
+		callbacks->keyCallback(key, scancode, action, mods);
+	}
 }
 
 
 void Window::mouseButtonMetaCallback(GLFWwindow* window, int button, int action, int mods) {
 	CallbackInterface* callbacks = static_cast<CallbackInterface*>(glfwGetWindowUserPointer(window));
-	callbacks->mouseButtonCallback(button, action, mods);
+
+	bool forward_to_user_callback = true;
+	// Forward the event to ImGui
+	if (ImGui::GetCurrentContext()) {
+		ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+		forward_to_user_callback = !ImGui::GetIO().WantCaptureMouse;
+	}
+
+	// If ImGui doesn't want to capture the mouse, call the user-defined callback
+	if (forward_to_user_callback && callbacks) {
+		callbacks->mouseButtonCallback(button, action, mods);
+	}
 }
 
 
 void Window::cursorPosMetaCallback(GLFWwindow* window, double xpos, double ypos) {
 	CallbackInterface* callbacks = static_cast<CallbackInterface*>(glfwGetWindowUserPointer(window));
-	callbacks->cursorPosCallback(xpos, ypos);
+
+	bool forward_to_user_callback = true;
+	// Forward the event to ImGui
+	if (ImGui::GetCurrentContext()) {
+		ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+		forward_to_user_callback = !ImGui::GetIO().WantCaptureMouse;
+	}
+
+	// Call user-defined cursor position callback only if ImGui isn't capturing the mouse
+	if (forward_to_user_callback && callbacks) {
+		callbacks->cursorPosCallback(xpos, ypos);
+	}
 }
 
 
 void Window::scrollMetaCallback(GLFWwindow* window, double xoffset, double yoffset) {
 	CallbackInterface* callbacks = static_cast<CallbackInterface*>(glfwGetWindowUserPointer(window));
-	callbacks->scrollCallback(xoffset, yoffset);
+
+	bool forward_to_user_callback = true;
+	// Forward the scroll event to ImGui
+	if (ImGui::GetCurrentContext()) {
+		ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+		forward_to_user_callback = !ImGui::GetIO().WantCaptureMouse;
+	}
+
+	// If ImGui isn't capturing scroll input, call the user-defined scroll callback
+	if (forward_to_user_callback && callbacks) {
+		callbacks->scrollCallback(xoffset, yoffset);
+	}
 }
 
 
 void Window::windowSizeMetaCallback(GLFWwindow* window, int width, int height) {
 	CallbackInterface* callbacks = static_cast<CallbackInterface*>(glfwGetWindowUserPointer(window));
-	callbacks->windowSizeCallback(width, height);
-}
 
+	// Call the user-defined callback for window resizing
+	if (callbacks) {
+		callbacks->windowSizeCallback(width, height);
+	}
+}
 
 // ----------------------
 // non-static definitions
@@ -75,6 +125,7 @@ Window::Window(
 	if (callbacks != nullptr) {
 		connectCallbacks();
 	}
+
 }
 
 
