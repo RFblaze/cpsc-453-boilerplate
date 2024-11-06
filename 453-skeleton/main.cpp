@@ -148,92 +148,89 @@ private:
 	const char* options[3]; // Options for the combo box
 };
 
+glm::vec3 calculateBezierPoint(const std::vector<glm::vec3>& controlPoints, float t) {
+    std::vector<glm::vec3> temp = controlPoints;
+    for (int j = 1; j < int(temp.size()); ++j) {
+        for (int i = 0; i < int(temp.size()) - j; ++i) {
+            temp[i] = (1.0f - t) * temp[i] + t * temp[i + 1];
+        }
+    }
+    return temp[0];
+}
+
 int main() {
-	Log::debug("Starting main");
+    Log::debug("Starting main");
 
-	// WINDOW
-	glfwInit();
-	Window window(800, 800, "CPSC 453: Assignment 3");
-	Panel panel(window.getGLFWwindow());
+    glfwInit();
+    Window window(800, 800, "CPSC 453: Bézier Curve Example");
+    Panel panel(window.getGLFWwindow());
 
-	//GLDebug::enable();
+    auto curve_editor_callback = std::make_shared<CurveEditorCallBack>();
+    auto curve_editor_panel_renderer = std::make_shared<CurveEditorPanelRenderer>();
 
-	// CALLBACKS
-	auto curve_editor_callback = std::make_shared<CurveEditorCallBack>();
-	//auto turn_table_3D_viewer_callback = std::make_shared<TurnTable3DViewerCallBack>();
+    window.setCallbacks(curve_editor_callback);
+    panel.setPanelRenderer(curve_editor_panel_renderer);
 
-	auto curve_editor_panel_renderer = std::make_shared<CurveEditorPanelRenderer>();
+    ShaderProgram shader_program_default("shaders/test.vert", "shaders/test.frag");
 
-	//Set callback to window
-	window.setCallbacks(curve_editor_callback);
-	// Can swap the callback instead of maintaining a state machine
-	//window.setCallbacks(turn_table_3D_viewer_callback);
+    std::vector<glm::vec3> cp_positions_vector = {
+        {-.5f, -.5f, 0.f},
+        { .5f, -.5f, 0.f},
+        { .5f,  .5f, 0.f},
+        {-.5f,  .5f, 0.f}
+    };
+    glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
 
-	//Panel inputs
-	panel.setPanelRenderer(curve_editor_panel_renderer);
+    // Set up control points in GPU
+    CPU_Geometry cp_point_cpu;
+    cp_point_cpu.verts = cp_positions_vector;
+    cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+    GPU_Geometry cp_point_gpu;
+    cp_point_gpu.setVerts(cp_point_cpu.verts);
+    cp_point_gpu.setCols(cp_point_cpu.cols);
 
-	ShaderProgram shader_program_default(
-		"shaders/test.vert",
-		"shaders/test.frag"
-	);
+    // Generate Bézier curve points
+    std::vector<glm::vec3> bezierCurvePoints;
+    int segments = 100;
+    for (int i = 0; i <= segments; ++i) {
+        float t = i / (float)segments;
+        bezierCurvePoints.push_back(calculateBezierPoint(cp_positions_vector, t));
+    }
 
-	std::vector<glm::vec3> cp_positions_vector = {
-		{-.5f, -.5f, 0.f},
-		{ .5f, -.5f, 0.f},
-		{ .5f,  .5f, 0.f},
-		{-.5f,  .5f, 0.f}
-	};
-	glm::vec3 cp_point_colour	= { 1.f,0.f,0.f };
-	glm::vec3 cp_line_colour	= { 0.f,1.f,0.f };
+    CPU_Geometry bezier_cpu;
+    bezier_cpu.verts = bezierCurvePoints;
+    bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+    GPU_Geometry bezier_gpu;
+    bezier_gpu.setVerts(bezier_cpu.verts);
+    bezier_gpu.setCols(bezier_cpu.cols);
 
-	CPU_Geometry cp_point_cpu;
-	cp_point_cpu.verts	= cp_positions_vector;
-	cp_point_cpu.cols	= std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
-	GPU_Geometry cp_point_gpu;
-	cp_point_gpu.setVerts(cp_point_cpu.verts);
-	cp_point_gpu.setCols(cp_point_cpu.cols);
+    while (!window.shouldClose()) {
+        glfwPollEvents();
+        glm::vec3 background_colour = curve_editor_panel_renderer->getColor();
 
-	CPU_Geometry cp_line_cpu;
-	cp_line_cpu.verts	= cp_positions_vector; // We are using GL_LINE_STRIP (change this if you want to use GL_LINES)
-	cp_line_cpu.cols	= std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_line_colour);
-	GPU_Geometry cp_line_gpu;
-	cp_line_gpu.setVerts(cp_line_cpu.verts);
-	cp_line_gpu.setCols(cp_line_cpu.cols);
+        glEnable(GL_LINE_SMOOTH);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_FRAMEBUFFER_SRGB);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glClearColor(background_colour.r, background_colour.g, background_colour.b, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	while (!window.shouldClose()) {
-		glfwPollEvents();
-		glm::vec3 background_colour = curve_editor_panel_renderer->getColor();
+        shader_program_default.use();
 
-		//------------------------------------------
-		glEnable(GL_LINE_SMOOTH);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_FRAMEBUFFER_SRGB);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glClearColor(background_colour.r, background_colour.g, background_colour.b, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//------------------------------------------
-		
-		// Use the default shader (can use different ones for different objects)
-		shader_program_default.use();
+        // Render control points
+        cp_point_gpu.bind();
+        glPointSize(15.f);
+        glDrawArrays(GL_POINTS, 0, cp_point_cpu.verts.size());
 
-		//Render control points
-		cp_point_gpu.bind();
-		glPointSize(15.f);
-		glDrawArrays(GL_POINTS, 0, cp_point_cpu.verts.size());
+        // Render Bézier curve
+        bezier_gpu.bind();
+        glDrawArrays(GL_LINE_STRIP, 0, bezier_cpu.verts.size());
 
-		//Render curve connecting control points
-		cp_line_gpu.bind();
-		//glLineWidth(10.f); //May do nothing (like it does on my computer): https://community.khronos.org/t/3-0-wide-lines-deprecated/55426
-		glDrawArrays(GL_LINE_STRIP, 0, cp_line_cpu.verts.size());
-		
-		//------------------------------------------
-		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
-		panel.render();
-		//------------------------------------------
-		window.swapBuffers();
-		//------------------------------------------
-	}
+        glDisable(GL_FRAMEBUFFER_SRGB);
+        panel.render();
+        window.swapBuffers();
+    }
 
-	glfwTerminate();
-	return 0;
+    glfwTerminate();
+    return 0;
 }
