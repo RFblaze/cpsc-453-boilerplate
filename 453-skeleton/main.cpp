@@ -24,6 +24,7 @@ struct UserParameters{
 	glm::vec3 currMousePosition;
 	glm::vec3 newMouseClickLocation;
 	bool clicked = false;
+	int buttonPressedASCII;
 };
 
 class CurveEditorCallBack : public CallbackInterface {
@@ -61,6 +62,7 @@ public:
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
 		Log::info("KeyCallback: key={}, action={}", key, action);
+		this->userParameters.buttonPressedASCII = key;
 	}
 
 	virtual void mouseButtonCallback(int button, int action, int mods) override {
@@ -92,6 +94,7 @@ public:
 	UserParameters getUserParameters(){
 		UserParameters ret = this->userParameters;
 		this->userParameters.clicked = false;
+		this->userParameters.buttonPressedASCII = NULL;
 		return ret;
 	}
 private:
@@ -283,7 +286,13 @@ int main() {
 	CPU_Geometry bSpline_cpu;
 	GPU_Geometry bSpline_gpu;
 
-	int curr_scene = 1;
+	int curr_scene = 2;
+
+	/*
+	mode false is place
+	mode true is move
+	*/ 
+	bool mode = false;
 
     while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -299,9 +308,32 @@ int main() {
 
 		shader_program_default.use();
 
+		// if M is clicked, the user moves switches between place mode and move mode for control points	
+		if (changes.buttonPressedASCII == 77){
+			mode = !mode;
+		}
+
 		switch (curr_scene)
 		{
 		case 1:
+			// if R is clicked, it deletes all control points & curve
+			if (changes.buttonPressedASCII == 82){
+				cp_positions_vector.clear();
+
+				cp_point_cpu.verts = cp_positions_vector;
+				cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+
+				cp_point_gpu.setVerts(cp_point_cpu.verts);
+				cp_point_gpu.setCols(cp_point_cpu.cols);
+
+				bezierCurvePoints.clear();
+				bezier_cpu.verts = bezierCurvePoints;
+				bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+
+				bezier_gpu.setVerts(bezier_cpu.verts);
+				bezier_gpu.setCols(bezier_cpu.cols);
+			}
+
 			if (changes.clicked) {
 				cp_positions_vector.push_back(changes.newMouseClickLocation);
 
@@ -342,6 +374,23 @@ int main() {
 			break;
 
 		case 2:
+			if (changes.buttonPressedASCII == 82){
+				cp_positions_vector.clear();
+
+				cp_point_cpu.verts = cp_positions_vector;
+				cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+
+				cp_point_gpu.setVerts(cp_point_cpu.verts);
+				cp_point_gpu.setCols(cp_point_cpu.cols);
+
+				bSplinePoints.clear();
+				bSpline_cpu.verts = bSplinePoints;
+				bSpline_cpu.cols = std::vector<glm::vec3>(bSpline_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+
+				bSpline_gpu.setVerts(bSpline_cpu.verts);
+				bSpline_gpu.setCols(bSpline_cpu.cols);
+			}
+
 			if (changes.clicked) {
 				cp_positions_vector.push_back(changes.newMouseClickLocation);
 
