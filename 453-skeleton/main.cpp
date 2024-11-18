@@ -252,6 +252,21 @@ std::vector<glm::vec3> generateQuadraticBSpline(const std::vector<glm::vec3>& co
     return points;
 }
 
+std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& bSplineCurvePoints, int numSlices) {
+    std::vector<glm::vec3> surfaceVertices;
+    float angleStep = 360.0f / numSlices;
+
+    for (const glm::vec3& point : bSplineCurvePoints) {
+        for (int slice = 0; slice < numSlices; ++slice) {
+            float angle = glm::radians(slice * angleStep);
+            float x = point.x * cos(angle) - point.z * sin(angle);
+            float z = point.x * sin(angle) + point.z * cos(angle);
+            surfaceVertices.emplace_back(x, point.y, z);
+        }
+    }
+    return surfaceVertices;
+}
+
 
 int main() {
     Log::debug("Starting main");
@@ -295,15 +310,27 @@ int main() {
 
 	// Surface of Revolution
 	std::vector<glm::vec3> surfaceVertices;
-	std::vector<unsigned int> surfaceIndices;
 
 	CPU_Geometry surface_cpu;
 	GPU_Geometry surface_gpu;
 
-	int curr_scene = 1;
+	int curr_scene = 3;
 
 	// Place by default
 	int mode = 80;
+
+	std::vector<glm::vec3> test;
+	// This is a control environment for testing
+			
+	test.push_back(glm::vec3(0.0f,-1.0f,0.0f));
+	test.push_back(glm::vec3(-0.24f,-0.88f,0.0f));
+	test.push_back(glm::vec3(-0.36f,-0.74f,0.0f));
+	test.push_back(glm::vec3(-0.22f,-0.69f,0.0f));
+	test.push_back(glm::vec3(-0.13f,-0.47f,0.0f));
+
+	/*
+	Tensor product surface calculation goes here
+	*/
 
     while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -326,8 +353,7 @@ int main() {
 		// if D is clicked, the user deletes specific control points
 		mode = changes.buttonPressedASCII;
 
-		switch (curr_scene)
-		{
+		switch(curr_scene){
 		
 		// Bezier Curve
 		case 1:
@@ -409,6 +435,7 @@ int main() {
 
 		// B-Spline Curve
 		case 2:
+			// if R is clicked, it deletes all control points & curve
 			if (changes.buttonPressedASCII == 82){
 				cp_positions_vector.clear();
 
@@ -430,11 +457,11 @@ int main() {
 				cp_positions_vector.push_back(changes.newMouseClickLocation);
 
 				// Update control points in GPU
-					cp_point_cpu.verts = cp_positions_vector;
-					cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+				cp_point_cpu.verts = cp_positions_vector;
+				cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
 
-					cp_point_gpu.setVerts(cp_point_cpu.verts);
-					cp_point_gpu.setCols(cp_point_cpu.cols);
+				cp_point_gpu.setVerts(cp_point_cpu.verts);
+				cp_point_gpu.setCols(cp_point_cpu.cols);
 
 				if (cp_positions_vector.size() >= 3) {
 
@@ -461,6 +488,22 @@ int main() {
 
 		// Surface of revolution
 		case 3:
+			// // Update B-Spline curve in GPU
+			// bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
+			bSplinePoints = generateQuadraticBSpline(test, 4);
+
+			surfaceVertices = createSurfaceOfRevolution(bSplinePoints, 30);
+
+			surface_cpu.verts = surfaceVertices;
+			surface_cpu.cols = std::vector<glm::vec3>(surface_cpu.verts.size(), glm::vec3(0, 0, 0));
+
+			surface_gpu.setVerts(surface_cpu.verts);
+			surface_gpu.setCols(surface_cpu.cols);
+			// This turns on wireframe
+			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+			surface_gpu.bind();
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, surface_cpu.verts.size());
+
 
 
 		default:
