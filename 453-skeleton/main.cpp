@@ -283,7 +283,7 @@ int main() {
 	CPU_Geometry bSpline_cpu;
 	GPU_Geometry bSpline_gpu;
 
-	int curr_scene = 2;
+	int curr_scene = 1;
 
     while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -305,13 +305,15 @@ int main() {
 			if (changes.clicked) {
 				cp_positions_vector.push_back(changes.newMouseClickLocation);
 
-				if (cp_positions_vector.size() >= 2) {
-					// Update control points in GPU
-					cp_point_cpu.verts = cp_positions_vector;
-					cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+				// Update control points in GPU
+				cp_point_cpu.verts = cp_positions_vector;
+				cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
 
-					cp_point_gpu.setVerts(cp_point_cpu.verts);
-					cp_point_gpu.setCols(cp_point_cpu.cols);
+				cp_point_gpu.setVerts(cp_point_cpu.verts);
+				cp_point_gpu.setCols(cp_point_cpu.cols);
+
+				if (cp_positions_vector.size() >= 2) {
+					
 
 					// Regenerate Bézier curve points
 					bezierCurvePoints.clear();
@@ -343,13 +345,14 @@ int main() {
 			if (changes.clicked) {
 				cp_positions_vector.push_back(changes.newMouseClickLocation);
 
-				if (cp_positions_vector.size() >= 3) {
-					// Update control points in GPU
+				// Update control points in GPU
 					cp_point_cpu.verts = cp_positions_vector;
 					cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
 
 					cp_point_gpu.setVerts(cp_point_cpu.verts);
 					cp_point_gpu.setCols(cp_point_cpu.cols);
+
+				if (cp_positions_vector.size() >= 3) {
 
 					// Update B-Spline curve in GPU
 					bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
