@@ -24,7 +24,11 @@ struct UserParameters{
 	glm::vec3 currMousePosition;
 	glm::vec3 newMouseClickLocation;
 	bool clicked = false;
-	int buttonPressedASCII;
+	int buttonPressedASCII = 80;
+
+	// for the move function
+	glm::vec3 firstClick;
+	glm::vec3 clickRelease;
 };
 
 class CurveEditorCallBack : public CallbackInterface {
@@ -253,7 +257,7 @@ int main() {
     Log::debug("Starting main");
 
     glfwInit();
-    Window window(800, 800, "CPSC 453: Bézier Curve Example");
+    Window window(800, 800, "CPSC 453: Assignment 3");
     Panel panel(window.getGLFWwindow());
 
     auto curve_editor_callback = std::make_shared<CurveEditorCallBack>();
@@ -271,6 +275,7 @@ int main() {
     CPU_Geometry cp_point_cpu;
     GPU_Geometry cp_point_gpu;
 
+
     // Bézier curve points
     std::vector<glm::vec3> bezierCurvePoints;
     int segments = 100;
@@ -279,6 +284,7 @@ int main() {
     CPU_Geometry bezier_cpu;
 	GPU_Geometry bezier_gpu;
 
+
 	// B-Spline curve points
 	std::vector<glm::vec3> bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4); // 4 iterations
 
@@ -286,13 +292,18 @@ int main() {
 	CPU_Geometry bSpline_cpu;
 	GPU_Geometry bSpline_gpu;
 
-	int curr_scene = 2;
 
-	/*
-	mode false is place
-	mode true is move
-	*/ 
-	bool mode = false;
+	// Surface of Revolution
+	std::vector<glm::vec3> surfaceVertices;
+	std::vector<unsigned int> surfaceIndices;
+
+	CPU_Geometry surface_cpu;
+	GPU_Geometry surface_gpu;
+
+	int curr_scene = 1;
+
+	// Place by default
+	int mode = 80;
 
     while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -308,13 +319,17 @@ int main() {
 
 		shader_program_default.use();
 
-		// if M is clicked, the user moves switches between place mode and move mode for control points	
-		if (changes.buttonPressedASCII == 77){
-			mode = !mode;
-		}
+
+
+		// if P is clicked, the user places control points
+		// if M is clicked, the user moves control points with click-and-drag
+		// if D is clicked, the user deletes specific control points
+		mode = changes.buttonPressedASCII;
 
 		switch (curr_scene)
 		{
+		
+		// Bezier Curve
 		case 1:
 			// if R is clicked, it deletes all control points & curve
 			if (changes.buttonPressedASCII == 82){
@@ -334,8 +349,27 @@ int main() {
 				bezier_gpu.setCols(bezier_cpu.cols);
 			}
 
+			// // if P is clicked, the user places new points
+			// if (changes.buttonPressedASCII == 80){
+			// 	mode = 80;
+			// }
+
+			// // if M is clicked, the user can click-and-drag to move points
+			// if (changes.buttonPressedASCII == 77){
+			// 	mode = 77;
+			// }
+
+			// // if D is clicked, the user deletes the clicked point
+			// if (changes.buttonPressedASCII == 68){
+			// 	mode = 68;
+			// }
+
+			
+
 			if (changes.clicked) {
-				cp_positions_vector.push_back(changes.newMouseClickLocation);
+				// if (mode == 80){
+				cp_positions_vector.push_back(changes.newMouseClickLocation);	
+				// }
 
 				// Update control points in GPU
 				cp_point_cpu.verts = cp_positions_vector;
@@ -373,6 +407,7 @@ int main() {
 			glDrawArrays(GL_LINE_STRIP, 0, bezier_cpu.verts.size());
 			break;
 
+		// B-Spline Curve
 		case 2:
 			if (changes.buttonPressedASCII == 82){
 				cp_positions_vector.clear();
@@ -423,6 +458,10 @@ int main() {
 			bSpline_gpu.bind();
 			glDrawArrays(GL_LINE_STRIP, 0, bSpline_cpu.verts.size());
 			break;
+
+		// Surface of revolution
+		case 3:
+
 
 		default:
 			break;
