@@ -214,6 +214,38 @@ glm::vec3 calculateBezierPoint(const std::vector<glm::vec3>& controlPoints, floa
     return temp[0];
 }
 
+std::vector<glm::vec3> generateQuadraticBSpline(const std::vector<glm::vec3>& controlPoints, int iterations) {
+    if (controlPoints.size() < 2) {
+        // Need at least 2 points for Chaikin's algorithm
+        return controlPoints;
+    }
+
+    std::vector<glm::vec3> points = controlPoints;
+
+    for (int iter = 0; iter < iterations; ++iter) {
+        std::vector<glm::vec3> newPoints;
+
+        // Start with the first control point (open curve)
+        newPoints.push_back(points[0]);
+
+        for (size_t i = 0; i < points.size() - 1; ++i) {
+            glm::vec3 p = 0.75f * points[i] + 0.25f * points[i + 1];
+            glm::vec3 q = 0.25f * points[i] + 0.75f * points[i + 1];
+            newPoints.push_back(p);
+            newPoints.push_back(q);
+        }
+
+        // End with the last control point (open curve)
+        newPoints.push_back(points.back());
+
+        // Update points for the next iteration
+        points = newPoints;
+    }
+
+    return points;
+}
+
+
 int main() {
     Log::debug("Starting main");
 
@@ -236,7 +268,7 @@ int main() {
     CPU_Geometry cp_point_cpu;
     GPU_Geometry cp_point_gpu;
 
-    // Generate Bézier curve points
+    // Bézier curve points
     std::vector<glm::vec3> bezierCurvePoints;
     int segments = 100;
 
@@ -244,7 +276,14 @@ int main() {
     CPU_Geometry bezier_cpu;
 	GPU_Geometry bezier_gpu;
 
-	int curr_scene = 1;
+	// B-Spline curve points
+	std::vector<glm::vec3> bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4); // 4 iterations
+
+	// B-Spline curve
+	CPU_Geometry bSpline_cpu;
+	GPU_Geometry bSpline_gpu;
+
+	int curr_scene = 2;
 
     while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -298,6 +337,39 @@ int main() {
 			// Render Bézier curve
 			bezier_gpu.bind();
 			glDrawArrays(GL_LINE_STRIP, 0, bezier_cpu.verts.size());
+			break;
+
+		case 2:
+			if (changes.clicked) {
+				cp_positions_vector.push_back(changes.newMouseClickLocation);
+
+				if (cp_positions_vector.size() >= 3) {
+					// Update control points in GPU
+					cp_point_cpu.verts = cp_positions_vector;
+					cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+
+					cp_point_gpu.setVerts(cp_point_cpu.verts);
+					cp_point_gpu.setCols(cp_point_cpu.cols);
+
+					// Update B-Spline curve in GPU
+					bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
+
+					bSpline_cpu.verts = bSplinePoints;
+					bSpline_cpu.cols = std::vector<glm::vec3>(bSpline_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+
+					bSpline_gpu.setVerts(bSpline_cpu.verts);
+					bSpline_gpu.setCols(bSpline_cpu.cols);
+				}
+			}
+
+			// Render control points
+			cp_point_gpu.bind();
+			glPointSize(15.f);
+			glDrawArrays(GL_POINTS, 0, cp_point_cpu.verts.size());
+
+			// Render B-Spline curve
+			bSpline_gpu.bind();
+			glDrawArrays(GL_LINE_STRIP, 0, bSpline_cpu.verts.size());
 			break;
 
 		default:
