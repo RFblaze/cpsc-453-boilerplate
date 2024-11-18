@@ -19,9 +19,45 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
+// Location refers to the screen coordinates from -1 to 1, not the pixel numbers
+struct UserParameters{
+	glm::vec3 currMousePosition;
+	glm::vec3 newMouseClickLocation;
+	bool clicked = false;
+};
+
 class CurveEditorCallBack : public CallbackInterface {
 public:
 	CurveEditorCallBack() {}
+
+	glm::vec3 normPixelPos(float screenPos_x, float screenPos_y){
+		glm::vec4 cursor = {screenPos_x, screenPos_y, 0.f, 1.f};
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
+		
+		// translates by half a pixel for pixel center being considered for cursor position
+		glm::mat4 pixel_centering_T = glm::translate(glm::mat4(1.f), glm::vec3(0.5f,0.5f,0.f));
+		cursor = pixel_centering_T * cursor;
+
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
+		
+		// Scale coords down to 0-1
+		glm::mat4 zero_to_one_S = glm::scale(glm::mat4(1.f), glm::vec3(0.00125f, 0.00125f, 0.f));
+		cursor = zero_to_one_S * cursor;
+
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
+
+		// Turn y from 0-1 to -1 to 0 (since xpos and ypos record position as positive downward)
+		cursor.y = 1.f - cursor.y;
+
+		// std::cout << cursor.x << " " << cursor.y << std::endl;
+
+		// Scale then Translate values to make them between -1 to 1
+		glm::mat4 normalize_S = glm::scale(glm::mat4(1.f), glm::vec3(2.f,2.f,0.f));
+		glm::mat4 normalize_T = glm::translate(glm::mat4(1.f), glm::vec3(-1.f,-1.f,0.f));
+		cursor = normalize_T * normalize_S * cursor;
+
+		return glm::vec3(cursor.x, cursor.y, 0.f);
+	}
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
 		Log::info("KeyCallback: key={}, action={}", key, action);
@@ -29,10 +65,19 @@ public:
 
 	virtual void mouseButtonCallback(int button, int action, int mods) override {
 		Log::info("MouseButtonCallback: button={}, action={}", button, action);
+
+		// Left click adds a point
+		// action = 1 is release of button
+		if (button == 0 && action == 1){
+			this->userParameters.clicked = true;
+			this->userParameters.newMouseClickLocation = this->normPixelPos(this->userParameters.currMousePosition.x, this->userParameters.currMousePosition.y);
+		}
 	}
 
 	virtual void cursorPosCallback(double xpos, double ypos) override {
 		Log::info("CursorPosCallback: xpos={}, ypos={}", xpos, ypos);
+		this->userParameters.currMousePosition = glm::vec3(float(xpos), float(ypos), 0.f);
+
 	}
 
 	virtual void scrollCallback(double xoffset, double yoffset) override {
@@ -43,6 +88,14 @@ public:
 		Log::info("WindowSizeCallback: width={}, height={}", width, height);
 		CallbackInterface::windowSizeCallback(width, height); // Important, calls glViewport(0, 0, width, height);
 	}
+
+	UserParameters getUserParameters(){
+		UserParameters ret = this->userParameters;
+		this->userParameters.clicked = false;
+		return ret;
+	}
+private:
+	UserParameters userParameters;
 };
 
 // Can swap the callback instead of maintaining a state machine
@@ -148,11 +201,14 @@ private:
 	const char* options[3]; // Options for the combo box
 };
 
-glm::vec3 calculateBezierPoint(const std::vector<glm::vec3>& controlPoints, float t) {
-    std::vector<glm::vec3> temp = controlPoints;
+glm::vec3 calculateBezierPoint(const std::vector<glm::vec3>& controlPoints, float u) {
+    if (controlPoints.empty()){
+		return glm::vec3();
+	}
+	std::vector<glm::vec3> temp = controlPoints;
     for (int j = 1; j < int(temp.size()); ++j) {
         for (int i = 0; i < int(temp.size()) - j; ++i) {
-            temp[i] = (1.0f - t) * temp[i] + t * temp[i + 1];
+            temp[i] = (1.0f - u) * temp[i] + u * temp[i + 1];
         }
     }
     return temp[0];
@@ -173,63 +229,86 @@ int main() {
 
     ShaderProgram shader_program_default("shaders/test.vert", "shaders/test.frag");
 
-    std::vector<glm::vec3> cp_positions_vector = {
-        {-.5f, -.5f, 0.f},
-        { .5f, -.5f, 0.f},
-        { .5f,  .5f, 0.f},
-        {-.5f,  .5f, 0.f}
-    };
+    std::vector<glm::vec3> cp_positions_vector = {};
     glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
 
-    // Set up control points in GPU
+    // Control points
     CPU_Geometry cp_point_cpu;
-    cp_point_cpu.verts = cp_positions_vector;
-    cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
     GPU_Geometry cp_point_gpu;
-    cp_point_gpu.setVerts(cp_point_cpu.verts);
-    cp_point_gpu.setCols(cp_point_cpu.cols);
 
     // Generate Bézier curve points
     std::vector<glm::vec3> bezierCurvePoints;
     int segments = 100;
-    for (int i = 0; i <= segments; ++i) {
-        float t = i / (float)segments;
-        bezierCurvePoints.push_back(calculateBezierPoint(cp_positions_vector, t));
-    }
 
+	// Bezier Curve
     CPU_Geometry bezier_cpu;
-    bezier_cpu.verts = bezierCurvePoints;
-    bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
-    GPU_Geometry bezier_gpu;
-    bezier_gpu.setVerts(bezier_cpu.verts);
-    bezier_gpu.setCols(bezier_cpu.cols);
+	GPU_Geometry bezier_gpu;
+
+	int curr_scene = 1;
 
     while (!window.shouldClose()) {
-        glfwPollEvents();
-        glm::vec3 background_colour = curve_editor_panel_renderer->getColor();
+		glfwPollEvents();
+		glm::vec3 background_colour = curve_editor_panel_renderer->getColor();
+		UserParameters changes = curve_editor_callback->getUserParameters();
 
-        glEnable(GL_LINE_SMOOTH);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_FRAMEBUFFER_SRGB);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glClearColor(background_colour.r, background_colour.g, background_colour.b, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_LINE_SMOOTH);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_FRAMEBUFFER_SRGB);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glClearColor(background_colour.r, background_colour.g, background_colour.b, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        shader_program_default.use();
+		shader_program_default.use();
 
-        // Render control points
-        cp_point_gpu.bind();
-        glPointSize(15.f);
-        glDrawArrays(GL_POINTS, 0, cp_point_cpu.verts.size());
+		switch (curr_scene)
+		{
+		case 1:
+			if (changes.clicked) {
+				cp_positions_vector.push_back(changes.newMouseClickLocation);
 
-        // Render Bézier curve
-        bezier_gpu.bind();
-        glDrawArrays(GL_LINE_STRIP, 0, bezier_cpu.verts.size());
+				if (cp_positions_vector.size() >= 2) {
+					// Update control points in GPU
+					cp_point_cpu.verts = cp_positions_vector;
+					cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
 
-        glDisable(GL_FRAMEBUFFER_SRGB);
-        panel.render();
-        window.swapBuffers();
-    }
+					cp_point_gpu.setVerts(cp_point_cpu.verts);
+					cp_point_gpu.setCols(cp_point_cpu.cols);
+
+					// Regenerate Bézier curve points
+					bezierCurvePoints.clear();
+					for (int i = 0; i <= segments; ++i) {
+						float t = i / (float)segments;
+						bezierCurvePoints.push_back(calculateBezierPoint(cp_positions_vector, t));
+					}
+
+					// Update Bézier curve in GPU
+					bezier_cpu.verts = bezierCurvePoints;
+					bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+
+					bezier_gpu.setVerts(bezier_cpu.verts);
+					bezier_gpu.setCols(bezier_cpu.cols);
+				}
+			}
+
+			// Render control points
+			cp_point_gpu.bind();
+			glPointSize(15.f);
+			glDrawArrays(GL_POINTS, 0, cp_point_cpu.verts.size());
+
+			// Render Bézier curve
+			bezier_gpu.bind();
+			glDrawArrays(GL_LINE_STRIP, 0, bezier_cpu.verts.size());
+			break;
+
+		default:
+			break;
+		}
+
+		glDisable(GL_FRAMEBUFFER_SRGB);
+		panel.render();
+		window.swapBuffers();
+	}
+
 
     glfwTerminate();
     return 0;
