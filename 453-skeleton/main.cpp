@@ -22,14 +22,21 @@
 
 // Location refers to the screen coordinates from -1 to 1, not the pixel numbers
 struct UserParameters{
+	// Tracking
 	glm::vec3 currMousePosition;
 	glm::vec3 newMouseClickLocation;
+
+	// User-Inputs
 	bool clicked = false;
 	int buttonPressedASCII = 80;
+	bool isWireframe = true;
 
 	// for the move function
 	glm::vec3 firstClick;
 	glm::vec3 clickRelease;
+
+	
+	
 };
 
 class CurveEditorCallBack : public CallbackInterface {
@@ -449,6 +456,11 @@ int main() {
 		// if D is clicked, the user deletes specific control points
 		mode = changes.buttonPressedASCII;
 
+		// if W is clicked, the display toggles between wireframe and solid
+		if (mode == 87){
+			changes.isWireframe = !changes.isWireframe;
+		}
+
 		switch(curr_scene){
 		
 		// Bezier Curve
@@ -595,8 +607,15 @@ int main() {
 
 			surface_gpu.setVerts(surface_cpu.verts);
 			surface_gpu.setCols(surface_cpu.cols);
-			// This turns ON wireframe
-			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+			
+			if (changes.isWireframe){
+				// This turns ON wireframe
+				glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+			}
+			else{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
+			
 			surface_gpu.bind();
 			glDrawArrays(GL_TRIANGLES, 0, surface_cpu.verts.size());
 
@@ -612,7 +631,13 @@ int main() {
 			tensor_gpu.setVerts(tensor_cpu.verts);
 			tensor_gpu.setCols(tensor_cpu.cols);
 
-			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+			if (changes.isWireframe){
+				// This turns ON wireframe
+				glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+			}
+			else{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
 			tensor_gpu.bind();
 
 			glDrawArrays(GL_TRIANGLES, 0, tensor_cpu.verts.size());
@@ -629,7 +654,13 @@ int main() {
 			tensor_gpu.setVerts(tensor_cpu.verts);
 			tensor_gpu.setCols(tensor_cpu.cols);
 
-			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+			if (changes.isWireframe){
+				// This turns ON wireframe
+				glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+			}
+			else{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
 			tensor_gpu.bind();
 
 			glDrawArrays(GL_TRIANGLES, 0, tensor_cpu.verts.size());
