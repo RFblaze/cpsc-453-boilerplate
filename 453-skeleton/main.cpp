@@ -6,6 +6,7 @@
 #include <vector>
 #include <limits>
 #include <functional>
+#include <cmath>
 
 #include "Geometry.h"
 #include "GLDebug.h"
@@ -267,6 +268,80 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& b
     return surfaceVertices;
 }
 
+// Define the B-spline basis function
+float BSplineBasis(int i, int k, float t, const std::vector<float>& knots) {
+    if (k == 1) {
+        return (t >= knots[i] && t < knots[i + 1]) ? 1.0f : 0.0f;
+    }
+
+    float denom1 = knots[i + k - 1] - knots[i];
+    float denom2 = knots[i + k] - knots[i + 1];
+    float term1 = (denom1 != 0.0f) ? ((t - knots[i]) / denom1) * BSplineBasis(i, k - 1, t, knots) : 0.0f;
+    float term2 = (denom2 != 0.0f) ? ((knots[i + k] - t) / denom2) * BSplineBasis(i + 1, k - 1, t, knots) : 0.0f;
+
+    return term1 + term2;
+}
+
+// Generate the tensor product surface
+std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vector<glm::vec3>> controlPoints, int resolutionU, int resolutionV) {
+    std::vector<std::vector<glm::vec3>> surface(resolutionU, std::vector<glm::vec3>(resolutionV));
+
+    // Knot vectors for uniform B-splines
+    std::vector<float> knotsU = { 0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 2.0f, 2.0f };
+    std::vector<float> knotsV = { 0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 2.0f, 2.0f };
+
+    float stepU = 1.0f / (resolutionU - 1);
+    float stepV = 1.0f / (resolutionV - 1);
+
+    for (int uIndex = 0; uIndex < resolutionU; ++uIndex) {
+        for (int vIndex = 0; vIndex < resolutionV; ++vIndex) {
+            float u = uIndex * stepU * 2.0f; // Map to [0, 2] range for knots
+            float v = vIndex * stepV * 2.0f; // Map to [0, 2] range for knots
+
+            glm::vec3 point(0.0f);
+
+            // Accumulate contributions from each control point
+            for (size_t i = 0; i < controlPoints.size(); ++i) {
+                for (size_t j = 0; j < controlPoints[i].size(); ++j) {
+                    float basisU = BSplineBasis(i, 3, u, knotsU);
+                    float basisV = BSplineBasis(j, 3, v, knotsV);
+                    point += basisU * basisV * controlPoints[i][j];
+                }
+            }
+
+            surface[uIndex][vIndex] = point;
+        }
+    }
+
+    return surface;
+}
+
+void makeTensorVertices(const std::vector<std::vector<glm::vec3>>& tensorSurface, std::vector<glm::vec3>& flattenedVertices) {
+    int rows = tensorSurface.size();
+    int cols = tensorSurface[0].size();
+
+    // Generate vertices for rendering using GL_TRIANGLES
+    for (int i = 0; i < rows - 1; ++i) {
+        for (int j = 0; j < cols - 1; ++j) {
+            // Define two triangles for each grid cell
+            glm::vec3 v0 = tensorSurface[i][j];
+            glm::vec3 v1 = tensorSurface[i][j + 1];
+            glm::vec3 v2 = tensorSurface[i + 1][j];
+            glm::vec3 v3 = tensorSurface[i + 1][j + 1];
+
+            // Triangle 1
+            flattenedVertices.push_back(v0);
+            flattenedVertices.push_back(v1);
+            flattenedVertices.push_back(v2);
+
+            // Triangle 2
+            flattenedVertices.push_back(v2);
+            flattenedVertices.push_back(v1);
+            flattenedVertices.push_back(v3);
+        }
+    }
+}
+
 
 int main() {
     Log::debug("Starting main");
@@ -314,7 +389,32 @@ int main() {
 	CPU_Geometry surface_cpu;
 	GPU_Geometry surface_gpu;
 
-	int curr_scene = 3;
+	/*
+	Tensor product surface calculation goes here
+	*/
+	std::vector< std::vector<glm::vec3> > controlPointsTensor1 = {
+		{glm::vec3(-2.f,0.f,-2.f), glm::vec3(-1.f,0.f,-2.f), glm::vec3(0.f,0.f,-2.f), glm::vec3(1.f,0.f,-2.f), glm::vec3(2.f,0.f,-2.f)},
+		{glm::vec3(-2.f,0.f,-1.f), glm::vec3(-1.f,1.f,-1.f), glm::vec3(0.f,1.f,-1.f), glm::vec3(1.f,1.f,-1.f), glm::vec3(2.f,0.f,-1.f)},
+		{glm::vec3(-2.f,0.f,0.f), glm::vec3(-1.f,1.f,0.f), glm::vec3(0.f,-1.f,0.f), glm::vec3(1.f,1.f,0.f), glm::vec3(2.f,0.f,0.f)},
+		{glm::vec3(-2.f,0.f,1.f), glm::vec3(-1.f,1.f,1.f), glm::vec3(0.f,1.f,1.f), glm::vec3(1.f,1.f,1.f), glm::vec3(2.f,0.f,1.f)},
+		{glm::vec3(-2.f,0.f,-2.f), glm::vec3(-1.f,0.f,2.f), glm::vec3(0.f,0.f,2.f), glm::vec3(1.f,0.f,2.f), glm::vec3(2.f,0.f,2.f)}
+	};
+
+	std::vector<std::vector<glm::vec3>> controlPointsTensor2 = {
+		{ { -1.5f, -1.0f, 0.0f }, { -0.5f, -1.0f, 1.2f }, {  0.5f, -1.0f, 0.8f }, {  1.5f, -1.0f, 0.0f } },
+		{ { -1.5f,  0.0f, 1.5f }, { -0.5f,  0.0f, 2.0f }, {  0.5f,  0.0f, 1.5f }, {  1.5f,  0.0f, 0.5f } },
+		{ { -1.5f,  1.0f, 0.0f }, { -0.5f,  1.0f, 0.5f }, {  0.5f,  1.0f, 0.2f }, {  1.5f,  1.0f, 0.0f } }
+	};
+
+	std::vector<std::vector<glm::vec3>> TensorProductSurface1 = generateTensorSurface(controlPointsTensor1, 20, 20);
+	std::vector<std::vector<glm::vec3>> TensorProductSurface2 = generateTensorSurface(controlPointsTensor2, 20, 20);
+
+	std::vector<glm::vec3> tensorVertices;
+
+	CPU_Geometry tensor_cpu;
+	GPU_Geometry tensor_gpu;
+
+	int curr_scene = 5;
 
 	// Place by default
 	int mode = 80;
@@ -327,10 +427,6 @@ int main() {
 	test.push_back(glm::vec3(-0.36f,-0.74f,0.0f));
 	test.push_back(glm::vec3(-0.22f,-0.69f,0.0f));
 	test.push_back(glm::vec3(-0.13f,-0.47f,0.0f));
-
-	/*
-	Tensor product surface calculation goes here
-	*/
 
     while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -499,12 +595,46 @@ int main() {
 
 			surface_gpu.setVerts(surface_cpu.verts);
 			surface_gpu.setCols(surface_cpu.cols);
-			// This turns on wireframe
+			// This turns ON wireframe
 			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 			surface_gpu.bind();
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, surface_cpu.verts.size());
+			glDrawArrays(GL_TRIANGLES, 0, surface_cpu.verts.size());
 
+			break;
+		
+		// Tensor product surface #1
+		case 4:
+			makeTensorVertices(TensorProductSurface1, tensorVertices);
 
+			tensor_cpu.verts = tensorVertices;
+			tensor_cpu.cols = std::vector<glm::vec3>(tensorVertices.size(), glm::vec3(0.f,0.f,0.f));
+
+			tensor_gpu.setVerts(tensor_cpu.verts);
+			tensor_gpu.setCols(tensor_cpu.cols);
+
+			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+			tensor_gpu.bind();
+
+			glDrawArrays(GL_TRIANGLES, 0, tensor_cpu.verts.size());
+
+			break;
+
+		// Tensor product surface #2
+		case 5:
+			makeTensorVertices(TensorProductSurface2, tensorVertices);
+
+			tensor_cpu.verts = tensorVertices;
+			tensor_cpu.cols = std::vector<glm::vec3>(tensorVertices.size(), glm::vec3(0.f,0.f,0.f));
+
+			tensor_gpu.setVerts(tensor_cpu.verts);
+			tensor_gpu.setCols(tensor_cpu.cols);
+
+			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+			tensor_gpu.bind();
+
+			glDrawArrays(GL_TRIANGLES, 0, tensor_cpu.verts.size());
+
+			break;
 
 		default:
 			break;
