@@ -86,6 +86,10 @@ public:
 		}
 	}
 
+	// Rotate using mouse drag
+	float lastX, lastY; // Store the last mouse position
+	bool firstMouse = true; // To detect the first frame of mouse input
+
 	virtual void mouseButtonCallback(int button, int action, int mods) override {
 		Log::info("MouseButtonCallback: button={}, action={}", button, action);
 
@@ -95,6 +99,33 @@ public:
 			this->userParameters.clicked = true;
 			this->userParameters.newMouseClickLocation = this->normPixelPos(this->userParameters.currMousePosition.x, this->userParameters.currMousePosition.y);
 		}
+
+		if (this->userParameters.cameraEnabled){
+			if (firstMouse) {
+				lastX = this->userParameters.currMousePosition.x;
+				lastY = this->userParameters.currMousePosition.y;
+				firstMouse = false;
+    		}
+
+			float xOffset = this->userParameters.currMousePosition.x - lastX;
+			float yOffset = lastY - this->userParameters.currMousePosition.y; // Inverted Y-axis for pitch
+			lastX = this->userParameters.currMousePosition.x;
+			lastY = this->userParameters.currMousePosition.y;
+
+		float sensitivity = 0.1f; // Mouse sensitivity
+		xOffset *= sensitivity;
+		yOffset *= sensitivity;
+
+		this->userParameters.newYaw += xOffset;
+		this->userParameters.newPitch += yOffset;
+
+		// Constrain pitch to prevent flipping
+		this->userParameters.newPitch = glm::clamp(this->userParameters.newPitch, -89.0f, 89.0f);
+		}
+
+		// Update the last mouse positions
+		lastX = this->userParameters.currMousePosition.x;
+		lastY = this->userParameters.currMousePosition.y;
 	}
 
 	virtual void cursorPosCallback(double xpos, double ypos) override {
@@ -376,7 +407,6 @@ void makeTensorVertices(const std::vector<std::vector<glm::vec3>>& tensorSurface
     }
 }
 
-
 int main() {
     Log::debug("Starting main");
 
@@ -402,8 +432,8 @@ int main() {
 
 	// Default view
 	float zoom = 3.0f;       // Distance from the target (controls zoom)
-	float pitch = 0.0f;       // Rotation around the X-axis (up/down movement)
-	float yaw = 90.0f;         // Rotation around the Y-axis (left/right movement)
+	float pitch = 0.0f;      // Rotation around the X-axis (up/down movement)
+	float yaw = 90.0f;       // Rotation around the Y-axis (left/right movement)
 
     // Control points
 	std::vector<glm::vec3> cp_positions_vector = {};
@@ -507,6 +537,8 @@ int main() {
 		if (changes.cameraEnabled){
 
 			zoom = changes.newZoom;
+			pitch = changes.newPitch;
+			yaw = changes.newYaw;
 			cameraPos = updateCameraPosition(cameraTarget, cameraUp, zoom, pitch, yaw);
 
 			glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
@@ -516,10 +548,12 @@ int main() {
 			glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(view));
 			glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(projection));
 		}
-		// 	else{
-		// 		// Here goes the reset of the view
-		// 	}
 		else{
+			// Reset of the view
+			cameraPos = {0.f,0.f,3.f};
+			cameraTarget = {0.f,0.f,0.f};
+			cameraUp = {0.f,1.f,0.f};
+
 			glUniformMatrix4fv(0,1,GL_FALSE,glm::value_ptr(defaultView));
 			glUniformMatrix4fv(1,1,GL_FALSE,glm::value_ptr(defaultProjection));
 		}
@@ -563,7 +597,7 @@ int main() {
 
 			
 
-			if (changes.clicked) {
+			if (changes.clicked && !changes.cameraEnabled) {
 				// if (mode == 80){
 				cp_positions_vector.push_back(changes.newMouseClickLocation);	
 				// }
