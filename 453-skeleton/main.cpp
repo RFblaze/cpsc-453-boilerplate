@@ -120,7 +120,7 @@ public:
 				return;
        	 	}
 
-			float xOffset = xpos - lastX;
+			float xOffset = lastX - xpos;
 			float yOffset = lastY - ypos; // Inverted Y-axis for pitch
 			lastX = xpos;
 			lastY = ypos;
@@ -511,7 +511,7 @@ int main() {
 	CPU_Geometry tensor_cpu;
 	GPU_Geometry tensor_gpu;
 
-	int curr_scene = 1;
+	int curr_scene = 4;
 
 	// Place by default
 	int mode = 80;
