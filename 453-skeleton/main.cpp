@@ -22,7 +22,7 @@
 
 // Location refers to the screen coordinates from -1 to 1, not the pixel numbers
 struct UserParameters{
-	// Tracking
+	// Control Points
 	glm::vec3 currMousePosition;
 	glm::vec3 newMouseClickLocation;
 
@@ -32,11 +32,14 @@ struct UserParameters{
 	bool isWireframe = true;
 	bool cameraEnabled = false;
 
-	// for the move function
+	// for moving function the control points
 	glm::vec3 firstClick;
 	glm::vec3 clickRelease;
 
-	
+	// for moving the camera
+	float newZoom = 3.f;
+	float newPitch = 0.f;
+	float newYaw = 90.f;
 	
 };
 
@@ -102,6 +105,10 @@ public:
 
 	virtual void scrollCallback(double xoffset, double yoffset) override {
 		Log::info("ScrollCallback: xoffset={}, yoffset={}", xoffset, yoffset);
+		this->userParameters.newZoom -= yoffset;
+
+		// Clamp to prevent extreme zoom
+		this->userParameters.newZoom = glm::clamp(this->userParameters.newZoom, 2.0f, 50.0f);
 	}
 
 	virtual void windowSizeCallback(int width, int height) override {
@@ -393,10 +400,10 @@ int main() {
 	glm::mat4 defaultView = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 	glm::mat4 defaultProjection = glm::perspective(glm::radians(45.0f), 1.f, 0.1f, 100.0f);
 
-
-	float zoom = 5.0f;       // Distance from the target (controls zoom)
+	// Default view
+	float zoom = 3.0f;       // Distance from the target (controls zoom)
 	float pitch = 0.0f;       // Rotation around the X-axis (up/down movement)
-	float yaw = 0.0f;         // Rotation around the Y-axis (left/right movement)
+	float yaw = 90.0f;         // Rotation around the Y-axis (left/right movement)
 
     // Control points
 	std::vector<glm::vec3> cp_positions_vector = {};
@@ -498,6 +505,8 @@ int main() {
 
 		// if Spacebar is clicked, it toggles 2D/3D camera mode
 		if (changes.cameraEnabled){
+
+			zoom = changes.newZoom;
 			cameraPos = updateCameraPosition(cameraTarget, cameraUp, zoom, pitch, yaw);
 
 			glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
