@@ -30,6 +30,7 @@ struct UserParameters{
 	bool clicked = false;
 	int buttonPressedASCII = 80;
 	bool isWireframe = true;
+	bool cameraEnabled = false;
 
 	// for the move function
 	glm::vec3 firstClick;
@@ -75,6 +76,11 @@ public:
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
 		Log::info("KeyCallback: key={}, action={}", key, action);
 		this->userParameters.buttonPressedASCII = key;
+
+		// if spacebar is clicked, toggle camera mode
+		if (key == 32){
+			this->userParameters.cameraEnabled = !this->userParameters.cameraEnabled;
+		}
 	}
 
 	virtual void mouseButtonCallback(int button, int action, int mods) override {
@@ -215,6 +221,20 @@ private:
 	int comboSelection;   // Index of selected option in combo box
 	const char* options[3]; // Options for the combo box
 };
+
+glm::vec3 updateCameraPosition(glm::vec3 cameraTarget, glm::vec3 cameraUp,
+	float zoom,
+	float pitch,
+	float yaw) {
+    // Convert spherical coordinates to Cartesian coordinates
+    float x = zoom * cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+    float y = zoom * sin(glm::radians(pitch));
+    float z = zoom * cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+
+    glm::vec3 cameraPos = glm::vec3(x, y, z) + cameraTarget; // Offset position relative to the target
+	return cameraPos;
+}
+
 
 glm::vec3 calculateBezierPoint(const std::vector<glm::vec3>& controlPoints, float u) {
     if (controlPoints.empty()){
@@ -365,10 +385,23 @@ int main() {
 
     ShaderProgram shader_program_default("shaders/test.vert", "shaders/test.frag");
 
-    std::vector<glm::vec3> cp_positions_vector = {};
-    glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
+	// Camera
+	glm::vec3 cameraPos = {0.f,0.f,3.f};      // Camera position
+	glm::vec3 cameraTarget = {0.f,0.f,0.f};   // Point the camera looks at (in this case, the origin glm::vec3(0.f,0.f,0.f))
+	glm::vec3 cameraUp = {0.f,1.f,0.f};       // "Up" direction for the camera (default glm::vec3(0.0f, 1.0f, 0.0f))
+
+	glm::mat4 defaultView = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+	glm::mat4 defaultProjection = glm::perspective(glm::radians(45.0f), 1.f, 0.1f, 100.0f);
+
+
+	float zoom = 10.0f;       // Distance from the target (controls zoom)
+	float pitch = 0.0f;       // Rotation around the X-axis (up/down movement)
+	float yaw = 0.0f;         // Rotation around the Y-axis (left/right movement)
 
     // Control points
+	std::vector<glm::vec3> cp_positions_vector = {};
+    glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
+
     CPU_Geometry cp_point_cpu;
     GPU_Geometry cp_point_gpu;
 
@@ -421,7 +454,7 @@ int main() {
 	CPU_Geometry tensor_cpu;
 	GPU_Geometry tensor_gpu;
 
-	int curr_scene = 5;
+	int curr_scene = 1;
 
 	// Place by default
 	int mode = 80;
@@ -449,16 +482,37 @@ int main() {
 
 		shader_program_default.use();
 
-
+		
 
 		// if P is clicked, the user places control points
 		// if M is clicked, the user moves control points with click-and-drag
 		// if D is clicked, the user deletes specific control points
+		// if R is clicked, it deletes all control points & curve
+		// if Spacebar is clicked, it toggles 2D/3D camera mode
 		mode = changes.buttonPressedASCII;
 
 		// if W is clicked, the display toggles between wireframe and solid
 		if (mode == 87){
 			changes.isWireframe = !changes.isWireframe;
+		}
+
+		// if Spacebar is clicked, it toggles 2D/3D camera mode
+		if (changes.cameraEnabled){
+			cameraPos = updateCameraPosition(cameraTarget, cameraUp, zoom, pitch, yaw);
+
+			glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+
+			glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.f / 800.f, 0.1f, 100.f);
+
+			glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(view));
+			glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(projection));
+		}
+		// 	else{
+		// 		// Here goes the reset of the view
+		// 	}
+		else{
+			glUniformMatrix4fv(0,1,GL_FALSE,glm::value_ptr(defaultView));
+			glUniformMatrix4fv(1,1,GL_FALSE,glm::value_ptr(defaultProjection));
 		}
 
 		switch(curr_scene){
