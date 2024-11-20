@@ -78,7 +78,7 @@ public:
 		this->userParameters.buttonPressedASCII = key;
 
 		// if spacebar is clicked, toggle camera mode
-		if (key == 32){
+		if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
 			this->userParameters.cameraEnabled = !this->userParameters.cameraEnabled;
 		}
 	}
@@ -394,7 +394,7 @@ int main() {
 	glm::mat4 defaultProjection = glm::perspective(glm::radians(45.0f), 1.f, 0.1f, 100.0f);
 
 
-	float zoom = 10.0f;       // Distance from the target (controls zoom)
+	float zoom = 5.0f;       // Distance from the target (controls zoom)
 	float pitch = 0.0f;       // Rotation around the X-axis (up/down movement)
 	float yaw = 0.0f;         // Rotation around the Y-axis (left/right movement)
 
