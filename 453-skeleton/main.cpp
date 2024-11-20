@@ -89,28 +89,41 @@ public:
 	// Rotate using mouse drag
 	float lastX, lastY; // Store the last mouse position
 	bool firstMouse = true; // To detect the first frame of mouse input
-
+	bool isDragging = false;
 	virtual void mouseButtonCallback(int button, int action, int mods) override {
 		Log::info("MouseButtonCallback: button={}, action={}", button, action);
 
 		// Left click adds a point
 		// action = 1 is release of button
-		if (button == 0 && action == 1){
+		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE){
 			this->userParameters.clicked = true;
 			this->userParameters.newMouseClickLocation = this->normPixelPos(this->userParameters.currMousePosition.x, this->userParameters.currMousePosition.y);
+			isDragging = false;
+		
 		}
 
-		if (this->userParameters.cameraEnabled){
-			if (firstMouse) {
-				lastX = this->userParameters.currMousePosition.x;
-				lastY = this->userParameters.currMousePosition.y;
-				firstMouse = false;
-    		}
+		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
+			isDragging = true;
+		}
 
-			float xOffset = this->userParameters.currMousePosition.x - lastX;
-			float yOffset = lastY - this->userParameters.currMousePosition.y; // Inverted Y-axis for pitch
-			lastX = this->userParameters.currMousePosition.x;
-			lastY = this->userParameters.currMousePosition.y;
+	}
+
+	virtual void cursorPosCallback(double xpos, double ypos) override {
+		Log::info("CursorPosCallback: xpos={}, ypos={}", xpos, ypos);
+		this->userParameters.currMousePosition = glm::vec3(float(xpos), float(ypos), 0.f);
+		
+		if (this->userParameters.cameraEnabled){
+			if (!isDragging) {
+				// If not dragging, update last positions to avoid jumps
+				lastX = xpos;
+				lastY = ypos;
+				return;
+       	 	}
+
+			float xOffset = xpos - lastX;
+			float yOffset = lastY - ypos; // Inverted Y-axis for pitch
+			lastX = xpos;
+			lastY = ypos;
 
 		float sensitivity = 0.1f; // Mouse sensitivity
 		xOffset *= sensitivity;
@@ -124,14 +137,9 @@ public:
 		}
 
 		// Update the last mouse positions
-		lastX = this->userParameters.currMousePosition.x;
-		lastY = this->userParameters.currMousePosition.y;
-	}
-
-	virtual void cursorPosCallback(double xpos, double ypos) override {
-		Log::info("CursorPosCallback: xpos={}, ypos={}", xpos, ypos);
-		this->userParameters.currMousePosition = glm::vec3(float(xpos), float(ypos), 0.f);
-
+		lastX = xpos;
+		lastY = ypos;
+	
 	}
 
 	virtual void scrollCallback(double xoffset, double yoffset) override {
@@ -152,6 +160,18 @@ public:
 		this->userParameters.clicked = false;
 		this->userParameters.buttonPressedASCII = NULL;
 		return ret;
+	}
+
+	void setNewZoom(float newZoom){
+		this->userParameters.newZoom = newZoom;
+	}
+
+	void setNewPitch(float newPitch){
+		this->userParameters.newPitch = newPitch;
+	}
+
+	void setNewYaw(float newYaw){
+		this->userParameters.newYaw = newYaw;
 	}
 private:
 	UserParameters userParameters;
@@ -553,6 +573,15 @@ int main() {
 			cameraPos = {0.f,0.f,3.f};
 			cameraTarget = {0.f,0.f,0.f};
 			cameraUp = {0.f,1.f,0.f};
+			cameraPos = updateCameraPosition(cameraTarget, cameraUp, zoom, pitch, yaw);
+
+			zoom = 3.0f;
+			pitch = 0.f;
+			yaw = 90.f;
+
+			curve_editor_callback->setNewZoom(zoom);
+			curve_editor_callback->setNewPitch(pitch);
+			curve_editor_callback->setNewYaw(yaw);
 
 			glUniformMatrix4fv(0,1,GL_FALSE,glm::value_ptr(defaultView));
 			glUniformMatrix4fv(1,1,GL_FALSE,glm::value_ptr(defaultProjection));
