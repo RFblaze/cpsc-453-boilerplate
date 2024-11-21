@@ -28,7 +28,7 @@ struct UserParameters{
 
 	// User-Inputs
 	bool clicked = false;
-	int buttonPressedASCII = 80;
+	int buttonPressedASCII = GLFW_KEY_P;
 	bool isWireframe = true;
 	bool cameraEnabled = false;
 	int scene = 1;
@@ -358,14 +358,33 @@ std::vector<glm::vec3> generateQuadraticBSpline(const std::vector<glm::vec3>& co
 
 std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& bSplineCurvePoints, int numSlices) {
     std::vector<glm::vec3> surfaceVertices;
-    float angleStep = 360.0f / numSlices;
+    float angleStep = glm::radians(360.0f / numSlices);
 
-    for (const glm::vec3& point : bSplineCurvePoints) {
+    // For each point in the original curve
+    for (size_t i = 0; i < bSplineCurvePoints.size() - 1; ++i) {
+        glm::vec3 bottom1 = bSplineCurvePoints[i];
+        glm::vec3 bottom2 = bSplineCurvePoints[i + 1];
+
+        // Create triangles for each slice around the revolution axis
         for (int slice = 0; slice < numSlices; ++slice) {
-            float angle = glm::radians(slice * angleStep);
-            float x = point.x * cos(angle) - point.z * sin(angle);
-            float z = point.x * sin(angle) + point.z * cos(angle);
-            surfaceVertices.emplace_back(x, point.y, z);
+            float angle1 = slice * angleStep;
+            float angle2 = (slice + 1) * angleStep;
+
+            // Rotate points around Y-axis
+            glm::vec3 p1(bottom1.x * cos(angle1), bottom1.y, bottom1.x * sin(angle1));
+            glm::vec3 p2(bottom1.x * cos(angle2), bottom1.y, bottom1.x * sin(angle2));
+            glm::vec3 p3(bottom2.x * cos(angle1), bottom2.y, bottom2.x * sin(angle1));
+            glm::vec3 p4(bottom2.x * cos(angle2), bottom2.y, bottom2.x * sin(angle2));
+
+            // First triangle of the quad
+            surfaceVertices.push_back(p1);
+            surfaceVertices.push_back(p2);
+            surfaceVertices.push_back(p3);
+
+            // Second triangle of the quad
+            surfaceVertices.push_back(p3);
+            surfaceVertices.push_back(p2);
+            surfaceVertices.push_back(p4);
         }
     }
     return surfaceVertices;
@@ -389,27 +408,49 @@ float BSplineBasis(int i, int k, float t, const std::vector<float>& knots) {
 std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vector<glm::vec3>> controlPoints, int resolutionU, int resolutionV) {
     std::vector<std::vector<glm::vec3>> surface(resolutionU, std::vector<glm::vec3>(resolutionV));
 
-    // Knot vectors for uniform B-splines
-    std::vector<float> knotsU = { 0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 2.0f, 2.0f };
-    std::vector<float> knotsV = { 0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 2.0f, 2.0f };
+    // Dynamically generate knot vectors based on control points
+    int degreeU = 3; // cubic B-spline
+    int degreeV = 3;
+    int numControlPointsU = controlPoints.size();
+    int numControlPointsV = controlPoints[0].size();
+
+    // Create more comprehensive knot vectors
+    std::vector<float> knotsU, knotsV;
+    
+    // Uniform knot vector generation
+    for (int i = 0; i < numControlPointsU + degreeU + 1; ++i) {
+        knotsU.push_back(static_cast<float>(i) / (numControlPointsU + degreeU));
+    }
+
+    for (int i = 0; i < numControlPointsV + degreeV + 1; ++i) {
+        knotsV.push_back(static_cast<float>(i) / (numControlPointsV + degreeV));
+    }
 
     float stepU = 1.0f / (resolutionU - 1);
     float stepV = 1.0f / (resolutionV - 1);
 
     for (int uIndex = 0; uIndex < resolutionU; ++uIndex) {
         for (int vIndex = 0; vIndex < resolutionV; ++vIndex) {
-            float u = uIndex * stepU * 2.0f; // Map to [0, 2] range for knots
-            float v = vIndex * stepV * 2.0f; // Map to [0, 2] range for knots
+            float u = uIndex * stepU;
+            float v = vIndex * stepV;
 
             glm::vec3 point(0.0f);
+            float totalWeight = 0.0f;
 
-            // Accumulate contributions from each control point
             for (size_t i = 0; i < controlPoints.size(); ++i) {
                 for (size_t j = 0; j < controlPoints[i].size(); ++j) {
-                    float basisU = BSplineBasis(i, 3, u, knotsU);
-                    float basisV = BSplineBasis(j, 3, v, knotsV);
-                    point += basisU * basisV * controlPoints[i][j];
+                    float basisU = BSplineBasis(i, degreeU + 1, u, knotsU);
+                    float basisV = BSplineBasis(j, degreeV + 1, v, knotsV);
+                    float weight = basisU * basisV;
+                    
+                    point += weight * controlPoints[i][j];
+                    totalWeight += weight;
                 }
+            }
+
+            // Normalize to prevent potential artifacts
+            if (totalWeight > 0.0f) {
+                point /= totalWeight;
             }
 
             surface[uIndex][vIndex] = point;
@@ -532,7 +573,7 @@ int main() {
 	int curr_scene = 5;
 
 	// Place by default
-	int mode = 80;
+	int mode = GLFW_KEY_P;
 
 	std::vector<glm::vec3> test;
 	// This is a control environment for testing
@@ -566,7 +607,7 @@ int main() {
 		// if W is clicked, the display toggles between wireframe and solid
 		// if Spacebar is clicked, it toggles 2D/3D camera mode
 		mode = changes.buttonPressedASCII;
-
+		curr_scene = changes.scene;
 		
 
 		// // if P is clicked, the user places new points
@@ -684,7 +725,7 @@ int main() {
 		// B-Spline Curve
 		case 2:
 			// if R is clicked, it deletes all control points & curve
-			if (changes.buttonPressedASCII == 82){
+			if (changes.buttonPressedASCII == GLFW_KEY_R){
 				cp_positions_vector.clear();
 
 				cp_point_cpu.verts = cp_positions_vector;
