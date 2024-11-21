@@ -28,7 +28,7 @@ struct UserParameters{
 
 	// User-Inputs
 	bool clicked = false;
-	int buttonPressedASCII = GLFW_KEY_P;
+	int newMode = GLFW_KEY_P;
 	bool isWireframe = true;
 	bool cameraEnabled = false;
 	int scene = 1;
@@ -79,13 +79,17 @@ public:
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
 		Log::info("KeyCallback: key={}, action={}", key, action);
-		this->userParameters.buttonPressedASCII = key;
-
+		
+		if (action == GLFW_PRESS){
+			this->userParameters.newMode = key;
+		}
+		
 		// if spacebar is clicked, toggle camera mode
 		if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
 			this->userParameters.cameraEnabled = !this->userParameters.cameraEnabled;
 		}
 
+		// if W is pressed, toggle between wireframe and solid mode
 		if (key == GLFW_KEY_W && action == GLFW_PRESS){
 			this->userParameters.isWireframe = !this->userParameters.isWireframe;
 		}
@@ -108,16 +112,14 @@ public:
 	float lastX, lastY; // Store the last mouse position
 	bool firstMouse = true; // To detect the first frame of mouse input
 	bool isDragging = false;
+
 	virtual void mouseButtonCallback(int button, int action, int mods) override {
 		Log::info("MouseButtonCallback: button={}, action={}", button, action);
 
-		// Left click adds a point
-		// action = 1 is release of button
 		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE){
 			this->userParameters.clicked = true;
 			this->userParameters.newMouseClickLocation = this->normPixelPos(this->userParameters.currMousePosition.x, this->userParameters.currMousePosition.y);
 			isDragging = false;
-		
 		}
 
 		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
@@ -176,7 +178,6 @@ public:
 	UserParameters getUserParameters(){
 		UserParameters ret = this->userParameters;
 		this->userParameters.clicked = false;
-		this->userParameters.buttonPressedASCII = NULL;
 		return ret;
 	}
 
@@ -492,6 +493,21 @@ void makeTensorVertices(const std::vector<std::vector<glm::vec3>>& tensorSurface
     }
 }
 
+int findNearestPoint(glm::vec3& point, std::vector<glm::vec3>& controlPoints) {
+	float minDistance = 0.2f;
+	int nearestIndex = -1;
+
+	for (size_t i = 0; i < controlPoints.size(); ++i) {
+		float distance = glm::distance(controlPoints[i], point);
+		if (distance < minDistance) {
+			minDistance = distance;
+			nearestIndex = i;
+		}
+	}
+
+	return nearestIndex;
+}
+
 int main() {
     Log::debug("Starting main");
 
@@ -576,19 +592,8 @@ int main() {
 	CPU_Geometry tensor_cpu;
 	GPU_Geometry tensor_gpu;
 
-	int curr_scene = 5;
-
-	// Place by default
-	int mode = GLFW_KEY_P;
-
-	std::vector<glm::vec3> test;
-	// This is a control environment for testing
-			
-	test.push_back(glm::vec3(0.0f,-1.0f,0.0f));
-	test.push_back(glm::vec3(-0.24f,-0.88f,0.0f));
-	test.push_back(glm::vec3(-0.36f,-0.74f,0.0f));
-	test.push_back(glm::vec3(-0.22f,-0.69f,0.0f));
-	test.push_back(glm::vec3(-0.13f,-0.47f,0.0f));
+	int curr_scene;
+	int mode;
 
     while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -606,30 +611,14 @@ int main() {
 
 		
 
-		// if P is clicked, the user places control points
-		// if M is clicked, the user moves control points with click-and-drag
-		// if D is clicked, the user deletes specific control points
-		// if R is clicked, it deletes all control points & curve
-		// if W is clicked, the display toggles between wireframe and solid
-		// if Spacebar is clicked, it toggles 2D/3D camera mode
-		mode = changes.buttonPressedASCII;
+		// if P is pressed, the user can place control points by clicking
+		// if M is pressed, the user moves control points with click-and-drag
+		// if D is pressed, the user deletes specific control points that are clicked
+		// if R is pressed, it deletes all control points & curve
+		// if W is pressed, the display toggles between wireframe and solid
+		// if Spacebar is pressed, it toggles 2D/3D camera mode
+		mode = changes.newMode;
 		curr_scene = changes.scene;
-		
-
-		// // if P is clicked, the user places new points
-			// if (changes.buttonPressedASCII == 80){
-			// 	mode = 80;
-			// }
-
-			// // if M is clicked, the user can click-and-drag to move points
-			// if (changes.buttonPressedASCII == 77){
-			// 	mode = 77;
-			// }
-
-			// // if D is clicked, the user deletes the clicked point
-			// if (changes.buttonPressedASCII == 68){
-			// 	mode = 68;
-			// }
 
 		// if Spacebar is clicked, it toggles 2D/3D camera mode
 		if (changes.cameraEnabled){
@@ -670,7 +659,7 @@ int main() {
 		// Bezier Curve
 		case 1:
 			// if R is clicked, it deletes all control points & curve
-			if (changes.buttonPressedASCII == GLFW_KEY_R){
+			if (changes.newMode == GLFW_KEY_R){
 				cp_positions_vector.clear();
 
 				cp_point_cpu.verts = cp_positions_vector;
@@ -687,10 +676,15 @@ int main() {
 				bezier_gpu.setCols(bezier_cpu.cols);
 			}
 
-			if (changes.clicked && !changes.cameraEnabled) {
-				// if (mode == 80){
-				cp_positions_vector.push_back(changes.newMouseClickLocation);	
-				// }
+			if (changes.clicked && !changes.cameraEnabled && mode == GLFW_KEY_P) {
+				cp_positions_vector.push_back(changes.newMouseClickLocation);
+			}
+
+			if (changes.clicked && !changes.cameraEnabled && mode == GLFW_KEY_D){
+				int pointIndexToDelete = findNearestPoint(changes.newMouseClickLocation, cp_positions_vector);
+				if (pointIndexToDelete != -1){
+					cp_positions_vector.erase(cp_positions_vector.begin() + pointIndexToDelete);
+				}
 			}
 
 			// Update control points in GPU
@@ -700,23 +694,19 @@ int main() {
 			cp_point_gpu.setVerts(cp_point_cpu.verts);
 			cp_point_gpu.setCols(cp_point_cpu.cols);
 
-			if (cp_positions_vector.size() >= 2) {
-				
-
-				// Regenerate Bézier curve points
-				bezierCurvePoints.clear();
-				for (int i = 0; i <= segments; ++i) {
-					float t = i / (float)segments;
-					bezierCurvePoints.push_back(calculateBezierPoint(cp_positions_vector, t));
-				}
-
-				// Update Bézier curve in GPU
-				bezier_cpu.verts = bezierCurvePoints;
-				bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
-
-				bezier_gpu.setVerts(bezier_cpu.verts);
-				bezier_gpu.setCols(bezier_cpu.cols);
+			// Regenerate Bézier curve points
+			bezierCurvePoints.clear();
+			for (int i = 0; i <= segments; ++i) {
+				float t = i / (float)segments;
+				bezierCurvePoints.push_back(calculateBezierPoint(cp_positions_vector, t));
 			}
+
+			// Update Bézier curve in GPU
+			bezier_cpu.verts = bezierCurvePoints;
+			bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+
+			bezier_gpu.setVerts(bezier_cpu.verts);
+			bezier_gpu.setCols(bezier_cpu.cols);
 
 			// Render control points
 			cp_point_gpu.bind();
@@ -731,7 +721,7 @@ int main() {
 		// B-Spline Curve
 		case 2:
 			// if R is clicked, it deletes all control points & curve
-			if (changes.buttonPressedASCII == GLFW_KEY_R){
+			if (changes.newMode == GLFW_KEY_R){
 				cp_positions_vector.clear();
 
 				cp_point_cpu.verts = cp_positions_vector;
@@ -748,9 +738,17 @@ int main() {
 				bSpline_gpu.setCols(bSpline_cpu.cols);
 			}
 
-			if (changes.clicked) {
+			if (changes.clicked && !changes.cameraEnabled && mode == GLFW_KEY_P) {
 				cp_positions_vector.push_back(changes.newMouseClickLocation);
 			}
+
+			if (changes.clicked && !changes.cameraEnabled && mode == GLFW_KEY_D){
+				int pointIndexToDelete = findNearestPoint(changes.newMouseClickLocation, cp_positions_vector);
+				if (pointIndexToDelete != -1){
+					cp_positions_vector.erase(cp_positions_vector.begin() + pointIndexToDelete);
+				}
+			}
+
 			// Update control points in GPU
 			cp_point_cpu.verts = cp_positions_vector;
 			cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
@@ -758,18 +756,15 @@ int main() {
 			cp_point_gpu.setVerts(cp_point_cpu.verts);
 			cp_point_gpu.setCols(cp_point_cpu.cols);
 
-			if (cp_positions_vector.size() >= 3) {
+			// Update B-Spline curve in GPU
+			bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
 
-				// Update B-Spline curve in GPU
-				bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
+			bSpline_cpu.verts = bSplinePoints;
+			bSpline_cpu.cols = std::vector<glm::vec3>(bSpline_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
 
-				bSpline_cpu.verts = bSplinePoints;
-				bSpline_cpu.cols = std::vector<glm::vec3>(bSpline_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
-
-				bSpline_gpu.setVerts(bSpline_cpu.verts);
-				bSpline_gpu.setCols(bSpline_cpu.cols);
-			}
-
+			bSpline_gpu.setVerts(bSpline_cpu.verts);
+			bSpline_gpu.setCols(bSpline_cpu.cols);
+			
 			// Render control points
 			cp_point_gpu.bind();
 			glPointSize(15.f);
