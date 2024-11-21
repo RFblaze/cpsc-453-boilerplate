@@ -41,6 +41,9 @@ struct UserParameters{
 	float newZoom = 3.f;
 	float newPitch = 0.f;
 	float newYaw = 90.f;
+
+	float movementX;
+	float movementY;
 	
 };
 
@@ -145,20 +148,39 @@ public:
 			lastX = xpos;
 			lastY = ypos;
 
-		float sensitivity = 0.25f; // Mouse sensitivity
-		xOffset *= sensitivity;
-		yOffset *= sensitivity;
+			float sensitivity = 0.25f; // Mouse sensitivity
+			xOffset *= sensitivity;
+			yOffset *= sensitivity;
 
-		this->userParameters.newYaw += xOffset;
-		this->userParameters.newPitch += yOffset;
+			this->userParameters.newYaw += xOffset;
+			this->userParameters.newPitch += yOffset;
 
-		// Constrain pitch to prevent flipping
-		this->userParameters.newPitch = glm::clamp(this->userParameters.newPitch, -89.0f, 89.0f);
+			// Constrain pitch to prevent flipping
+			this->userParameters.newPitch = glm::clamp(this->userParameters.newPitch, -89.0f, 89.0f);
+			}
+
+			// Update the last mouse positions
+			lastX = xpos;
+			lastY = ypos;
+
+		if (this->userParameters.newMode == GLFW_KEY_M){
+			if (!isDragging) {
+				// If not dragging, update last positions to avoid jumps
+				lastX = xpos;
+				lastY = ypos;
+				return;
+       	 	}
+
+			float xOffset = xpos - lastX;
+			float yOffset = ypos - lastY;
+
+			this->userParameters.movementX = glm::clamp(xOffset, 0.f, 1.f);
+			this->userParameters.movementY = glm::clamp(yOffset, 0.f, 1.f);
+
+			// Update the last mouse positions
+			lastX = xpos;
+			lastY = ypos;
 		}
-
-		// Update the last mouse positions
-		lastX = xpos;
-		lastY = ypos;
 	
 	}
 
@@ -687,6 +709,18 @@ int main() {
 				}
 			}
 
+			if (changes.clicked && !changes.cameraEnabled && mode == GLFW_KEY_M){
+				int pointIndexToMove = findNearestPoint(changes.newMouseClickLocation, cp_positions_vector);
+				Log::info("MovementX: {}, MovementY: {}", changes.movementX, changes.movementY);
+				if (pointIndexToMove != -1){
+					cp_positions_vector.at(pointIndexToMove) = glm::vec3(
+						cp_positions_vector.at(pointIndexToMove).x + changes.movementX,
+						cp_positions_vector.at(pointIndexToMove).y + changes.movementY,
+						0.f
+					);
+				}
+			}
+
 			// Update control points in GPU
 			cp_point_cpu.verts = cp_positions_vector;
 			cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
@@ -778,27 +812,28 @@ int main() {
 		// Surface of revolution
 		case 3:
 			// // Update B-Spline curve in GPU
-			bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
+			if (!cp_positions_vector.empty()){
+				bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
 
-			surfaceVertices = createSurfaceOfRevolution(bSplinePoints, 30);
+				surfaceVertices = createSurfaceOfRevolution(bSplinePoints, 30);
 
-			surface_cpu.verts = surfaceVertices;
-			surface_cpu.cols = std::vector<glm::vec3>(surface_cpu.verts.size(), glm::vec3(0, 0, 0));
+				surface_cpu.verts = surfaceVertices;
+				surface_cpu.cols = std::vector<glm::vec3>(surface_cpu.verts.size(), glm::vec3(0, 0, 0));
 
-			surface_gpu.setVerts(surface_cpu.verts);
-			surface_gpu.setCols(surface_cpu.cols);
-			
-			if (changes.isWireframe){
-				// This turns ON wireframe
-				glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+				surface_gpu.setVerts(surface_cpu.verts);
+				surface_gpu.setCols(surface_cpu.cols);
+				
+				if (changes.isWireframe){
+					// This turns ON wireframe
+					glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+				}
+				else{
+					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				}
+				
+				surface_gpu.bind();
+				glDrawArrays(GL_TRIANGLES, 0, surface_cpu.verts.size());
 			}
-			else{
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			}
-			
-			surface_gpu.bind();
-			glDrawArrays(GL_TRIANGLES, 0, surface_cpu.verts.size());
-
 			break;
 		
 		// Tensor product surface #1
