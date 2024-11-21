@@ -464,6 +464,10 @@ void makeTensorVertices(const std::vector<std::vector<glm::vec3>>& tensorSurface
     int rows = tensorSurface.size();
     int cols = tensorSurface[0].size();
 
+	if (flattenedVertices.size() > 0){
+		flattenedVertices.clear();
+	}
+
     // Generate vertices for rendering using GL_TRIANGLES
     for (int i = 0; i < rows - 1; ++i) {
         for (int j = 0; j < cols - 1; ++j) {
