@@ -298,10 +298,7 @@ private:
 	const char* options[3]; // Options for the combo box
 };
 
-glm::vec3 updateCameraPosition(glm::vec3 cameraTarget, glm::vec3 cameraUp,
-	float zoom,
-	float pitch,
-	float yaw) {
+glm::vec3 updateCameraPosition(glm::vec3 cameraTarget, glm::vec3 cameraUp, float zoom, float pitch, float yaw) {
     // Convert spherical coordinates to Cartesian coordinates
     float x = zoom * cos(glm::radians(pitch)) * cos(glm::radians(yaw));
     float y = zoom * sin(glm::radians(pitch));
@@ -310,7 +307,6 @@ glm::vec3 updateCameraPosition(glm::vec3 cameraTarget, glm::vec3 cameraUp,
     glm::vec3 cameraPos = glm::vec3(x, y, z) + cameraTarget; // Offset position relative to the target
 	return cameraPos;
 }
-
 
 glm::vec3 calculateBezierPoint(const std::vector<glm::vec3>& controlPoints, float u) {
     if (controlPoints.empty()){
@@ -695,31 +691,31 @@ int main() {
 				// if (mode == 80){
 				cp_positions_vector.push_back(changes.newMouseClickLocation);	
 				// }
+			}
 
-				// Update control points in GPU
-				cp_point_cpu.verts = cp_positions_vector;
-				cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+			// Update control points in GPU
+			cp_point_cpu.verts = cp_positions_vector;
+			cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
 
-				cp_point_gpu.setVerts(cp_point_cpu.verts);
-				cp_point_gpu.setCols(cp_point_cpu.cols);
+			cp_point_gpu.setVerts(cp_point_cpu.verts);
+			cp_point_gpu.setCols(cp_point_cpu.cols);
 
-				if (cp_positions_vector.size() >= 2) {
-					
+			if (cp_positions_vector.size() >= 2) {
+				
 
-					// Regenerate Bézier curve points
-					bezierCurvePoints.clear();
-					for (int i = 0; i <= segments; ++i) {
-						float t = i / (float)segments;
-						bezierCurvePoints.push_back(calculateBezierPoint(cp_positions_vector, t));
-					}
-
-					// Update Bézier curve in GPU
-					bezier_cpu.verts = bezierCurvePoints;
-					bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
-
-					bezier_gpu.setVerts(bezier_cpu.verts);
-					bezier_gpu.setCols(bezier_cpu.cols);
+				// Regenerate Bézier curve points
+				bezierCurvePoints.clear();
+				for (int i = 0; i <= segments; ++i) {
+					float t = i / (float)segments;
+					bezierCurvePoints.push_back(calculateBezierPoint(cp_positions_vector, t));
 				}
+
+				// Update Bézier curve in GPU
+				bezier_cpu.verts = bezierCurvePoints;
+				bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+
+				bezier_gpu.setVerts(bezier_cpu.verts);
+				bezier_gpu.setCols(bezier_cpu.cols);
 			}
 
 			// Render control points
@@ -754,25 +750,24 @@ int main() {
 
 			if (changes.clicked) {
 				cp_positions_vector.push_back(changes.newMouseClickLocation);
+			}
+			// Update control points in GPU
+			cp_point_cpu.verts = cp_positions_vector;
+			cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
 
-				// Update control points in GPU
-				cp_point_cpu.verts = cp_positions_vector;
-				cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+			cp_point_gpu.setVerts(cp_point_cpu.verts);
+			cp_point_gpu.setCols(cp_point_cpu.cols);
 
-				cp_point_gpu.setVerts(cp_point_cpu.verts);
-				cp_point_gpu.setCols(cp_point_cpu.cols);
+			if (cp_positions_vector.size() >= 3) {
 
-				if (cp_positions_vector.size() >= 3) {
+				// Update B-Spline curve in GPU
+				bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
 
-					// Update B-Spline curve in GPU
-					bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
+				bSpline_cpu.verts = bSplinePoints;
+				bSpline_cpu.cols = std::vector<glm::vec3>(bSpline_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
 
-					bSpline_cpu.verts = bSplinePoints;
-					bSpline_cpu.cols = std::vector<glm::vec3>(bSpline_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
-
-					bSpline_gpu.setVerts(bSpline_cpu.verts);
-					bSpline_gpu.setCols(bSpline_cpu.cols);
-				}
+				bSpline_gpu.setVerts(bSpline_cpu.verts);
+				bSpline_gpu.setCols(bSpline_cpu.cols);
 			}
 
 			// Render control points
@@ -788,8 +783,7 @@ int main() {
 		// Surface of revolution
 		case 3:
 			// // Update B-Spline curve in GPU
-			// bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
-			bSplinePoints = generateQuadraticBSpline(test, 4);
+			bSplinePoints = generateQuadraticBSpline(cp_positions_vector, 4);
 
 			surfaceVertices = createSurfaceOfRevolution(bSplinePoints, 30);
 
