@@ -98,7 +98,7 @@ public:
 		}
 
 		if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
-			if (this->userParameters.scene < 6){
+			if (this->userParameters.scene < 5){
 				this->userParameters.scene += 1;
 			}
 		}
@@ -408,24 +408,29 @@ float BSplineBasis(int i, int k, float t, const std::vector<float>& knots) {
 std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vector<glm::vec3>> controlPoints, int resolutionU, int resolutionV) {
     std::vector<std::vector<glm::vec3>> surface(resolutionU, std::vector<glm::vec3>(resolutionV));
 
-    // Dynamically generate knot vectors based on control points
     int degreeU = 3; // cubic B-spline
     int degreeV = 3;
     int numControlPointsU = controlPoints.size();
     int numControlPointsV = controlPoints[0].size();
 
-    // Create more comprehensive knot vectors
-    std::vector<float> knotsU, knotsV;
-    
-    // Uniform knot vector generation
-    for (int i = 0; i < numControlPointsU + degreeU + 1; ++i) {
-        knotsU.push_back(static_cast<float>(i) / (numControlPointsU + degreeU));
-    }
+    // Improved knot vector generation with uniform distribution
+    std::vector<float> knotsU(numControlPointsU + degreeU + 1, 0.0f);
+    std::vector<float> knotsV(numControlPointsV + degreeV + 1, 0.0f);
 
-    for (int i = 0; i < numControlPointsV + degreeV + 1; ++i) {
-        knotsV.push_back(static_cast<float>(i) / (numControlPointsV + degreeV));
-    }
+    // Create uniform open knot vector
+    for (int i = 0; i <= degreeU; ++i) knotsU[i] = 0.0f;
+    for (int i = 1; i <= numControlPointsU - degreeU; ++i) 
+        knotsU[degreeU + i] = static_cast<float>(i) / (numControlPointsU - degreeU + 1);
+    for (int i = 1; i <= degreeU; ++i) 
+        knotsU[numControlPointsU + i] = 1.0f;
 
+    for (int i = 0; i <= degreeV; ++i) knotsV[i] = 0.0f;
+    for (int i = 1; i <= numControlPointsV - degreeV; ++i) 
+        knotsV[degreeV + i] = static_cast<float>(i) / (numControlPointsV - degreeV + 1);
+    for (int i = 1; i <= degreeV; ++i) 
+        knotsV[numControlPointsV + i] = 1.0f;
+
+    // More precise parameter stepping
     float stepU = 1.0f / (resolutionU - 1);
     float stepV = 1.0f / (resolutionV - 1);
 
@@ -437,8 +442,9 @@ std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vecto
             glm::vec3 point(0.0f);
             float totalWeight = 0.0f;
 
-            for (size_t i = 0; i < controlPoints.size(); ++i) {
-                for (size_t j = 0; j < controlPoints[i].size(); ++j) {
+            // Compute surface point using basis functions
+            for (int i = 0; i < numControlPointsU; ++i) {
+                for (int j = 0; j < numControlPointsV; ++j) {
                     float basisU = BSplineBasis(i, degreeU + 1, u, knotsU);
                     float basisV = BSplineBasis(j, degreeV + 1, v, knotsV);
                     float weight = basisU * basisV;
@@ -448,7 +454,7 @@ std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vecto
                 }
             }
 
-            // Normalize to prevent potential artifacts
+            // Normalize to ensure surface passes through control points
             if (totalWeight > 0.0f) {
                 point /= totalWeight;
             }
