@@ -31,6 +31,7 @@ struct UserParameters{
 	int buttonPressedASCII = 80;
 	bool isWireframe = true;
 	bool cameraEnabled = false;
+	int scene = 1;
 
 	// for moving function the control points
 	glm::vec3 firstClick;
@@ -84,6 +85,23 @@ public:
 		if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
 			this->userParameters.cameraEnabled = !this->userParameters.cameraEnabled;
 		}
+
+		if (key == GLFW_KEY_W && action == GLFW_PRESS){
+			this->userParameters.isWireframe = !this->userParameters.isWireframe;
+		}
+
+		// if left or right are clicked, switch scenes
+		if (key == GLFW_KEY_LEFT && action == GLFW_PRESS){
+			if (this->userParameters.scene > 1){
+				this->userParameters.scene -= 1;
+			}
+		}
+
+		if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
+			if (this->userParameters.scene < 6){
+				this->userParameters.scene += 1;
+			}
+		}
 	}
 
 	// Rotate using mouse drag
@@ -125,7 +143,7 @@ public:
 			lastX = xpos;
 			lastY = ypos;
 
-		float sensitivity = 0.1f; // Mouse sensitivity
+		float sensitivity = 0.25f; // Mouse sensitivity
 		xOffset *= sensitivity;
 		yOffset *= sensitivity;
 
@@ -147,7 +165,7 @@ public:
 		this->userParameters.newZoom -= yoffset;
 
 		// Clamp to prevent extreme zoom
-		this->userParameters.newZoom = glm::clamp(this->userParameters.newZoom, 2.0f, 50.0f);
+		this->userParameters.newZoom = glm::clamp(this->userParameters.newZoom, 0.10f, 50.0f);
 	}
 
 	virtual void windowSizeCallback(int width, int height) override {
@@ -511,7 +529,7 @@ int main() {
 	CPU_Geometry tensor_cpu;
 	GPU_Geometry tensor_gpu;
 
-	int curr_scene = 4;
+	int curr_scene = 5;
 
 	// Place by default
 	int mode = 80;
@@ -545,13 +563,26 @@ int main() {
 		// if M is clicked, the user moves control points with click-and-drag
 		// if D is clicked, the user deletes specific control points
 		// if R is clicked, it deletes all control points & curve
+		// if W is clicked, the display toggles between wireframe and solid
 		// if Spacebar is clicked, it toggles 2D/3D camera mode
 		mode = changes.buttonPressedASCII;
 
-		// if W is clicked, the display toggles between wireframe and solid
-		if (mode == 87){
-			changes.isWireframe = !changes.isWireframe;
-		}
+		
+
+		// // if P is clicked, the user places new points
+			// if (changes.buttonPressedASCII == 80){
+			// 	mode = 80;
+			// }
+
+			// // if M is clicked, the user can click-and-drag to move points
+			// if (changes.buttonPressedASCII == 77){
+			// 	mode = 77;
+			// }
+
+			// // if D is clicked, the user deletes the clicked point
+			// if (changes.buttonPressedASCII == 68){
+			// 	mode = 68;
+			// }
 
 		// if Spacebar is clicked, it toggles 2D/3D camera mode
 		if (changes.cameraEnabled){
@@ -592,7 +623,7 @@ int main() {
 		// Bezier Curve
 		case 1:
 			// if R is clicked, it deletes all control points & curve
-			if (changes.buttonPressedASCII == 82){
+			if (changes.buttonPressedASCII == GLFW_KEY_R){
 				cp_positions_vector.clear();
 
 				cp_point_cpu.verts = cp_positions_vector;
@@ -608,23 +639,6 @@ int main() {
 				bezier_gpu.setVerts(bezier_cpu.verts);
 				bezier_gpu.setCols(bezier_cpu.cols);
 			}
-
-			// // if P is clicked, the user places new points
-			// if (changes.buttonPressedASCII == 80){
-			// 	mode = 80;
-			// }
-
-			// // if M is clicked, the user can click-and-drag to move points
-			// if (changes.buttonPressedASCII == 77){
-			// 	mode = 77;
-			// }
-
-			// // if D is clicked, the user deletes the clicked point
-			// if (changes.buttonPressedASCII == 68){
-			// 	mode = 68;
-			// }
-
-			
 
 			if (changes.clicked && !changes.cameraEnabled) {
 				// if (mode == 80){
