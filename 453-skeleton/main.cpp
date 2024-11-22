@@ -34,8 +34,7 @@ struct UserParameters{
 	int scene = 1;
 
 	// for moving function the control points
-	glm::vec3 firstClick;
-	glm::vec3 clickRelease;
+	glm::vec3 moveTo;
 
 	// for moving the camera
 	float newZoom = 3.f;
@@ -113,6 +112,7 @@ public:
 
 	// Rotate using mouse drag
 	float lastX, lastY; // Store the last mouse position
+	float lastXForCP, lastYForCP;
 	bool firstMouse = true; // To detect the first frame of mouse input
 	bool isDragging = false;
 
@@ -142,11 +142,13 @@ public:
 				lastY = ypos;
 				return;
        	 	}
+			std::cout << "lastX" << " " << lastX << std::endl;
+			std::cout << "lastY" << " " << lastY << std::endl;
+			std::cout << "xpos" << " " << xpos << std::endl;
+			std::cout << "ypos" << " " << ypos << std::endl;
 
 			float xOffset = lastX - xpos;
-			float yOffset = lastY - ypos; // Inverted Y-axis for pitch
-			lastX = xpos;
-			lastY = ypos;
+			float yOffset = lastY - ypos;
 
 			float sensitivity = 0.25f; // Mouse sensitivity
 			xOffset *= sensitivity;
@@ -164,22 +166,7 @@ public:
 			lastY = ypos;
 
 		if (this->userParameters.newMode == GLFW_KEY_M){
-			if (!isDragging) {
-				// If not dragging, update last positions to avoid jumps
-				lastX = xpos;
-				lastY = ypos;
-				return;
-       	 	}
-
-			float xOffset = xpos - lastX;
-			float yOffset = ypos - lastY;
-
-			this->userParameters.movementX = glm::clamp(xOffset, 0.f, 1.f);
-			this->userParameters.movementY = glm::clamp(yOffset, 0.f, 1.f);
-
-			// Update the last mouse positions
-			lastX = xpos;
-			lastY = ypos;
+			this->userParameters.moveTo = this->normPixelPos(xpos, ypos);
 		}
 	
 	}
@@ -438,25 +425,21 @@ std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vecto
 
     // Create uniform open knot vector
     for (int i = 0; i <= degreeU; ++i) knotsU[i] = 0.0f;
-    for (int i = 1; i <= numControlPointsU - degreeU; ++i) 
-        knotsU[degreeU + i] = static_cast<float>(i) / (numControlPointsU - degreeU + 1);
-    for (int i = 1; i <= degreeU; ++i) 
+    for (int i = 1; i <= numControlPointsU - degreeU; ++i)
+        knotsU[degreeU + i] = static_cast<float>(i) / (numControlPointsU - degreeU);
+    for (int i = 1; i <= degreeU; ++i)
         knotsU[numControlPointsU + i] = 1.0f;
 
     for (int i = 0; i <= degreeV; ++i) knotsV[i] = 0.0f;
-    for (int i = 1; i <= numControlPointsV - degreeV; ++i) 
-        knotsV[degreeV + i] = static_cast<float>(i) / (numControlPointsV - degreeV + 1);
-    for (int i = 1; i <= degreeV; ++i) 
+    for (int i = 1; i <= numControlPointsV - degreeV; ++i)
+        knotsV[degreeV + i] = static_cast<float>(i) / (numControlPointsV - degreeV);
+    for (int i = 1; i <= degreeV; ++i)
         knotsV[numControlPointsV + i] = 1.0f;
-
-    // More precise parameter stepping
-    float stepU = 1.0f / (resolutionU - 1);
-    float stepV = 1.0f / (resolutionV - 1);
 
     for (int uIndex = 0; uIndex < resolutionU; ++uIndex) {
         for (int vIndex = 0; vIndex < resolutionV; ++vIndex) {
-            float u = uIndex * stepU;
-            float v = vIndex * stepV;
+            float u = static_cast<float>(uIndex) / (resolutionU - 1);
+            float v = static_cast<float>(vIndex) / (resolutionV - 1);
 
             glm::vec3 point(0.0f);
             float totalWeight = 0.0f;
@@ -484,6 +467,8 @@ std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vecto
 
     return surface;
 }
+
+
 
 void makeTensorVertices(const std::vector<std::vector<glm::vec3>>& tensorSurface, std::vector<glm::vec3>& flattenedVertices) {
     int rows = tensorSurface.size();
@@ -516,7 +501,7 @@ void makeTensorVertices(const std::vector<std::vector<glm::vec3>>& tensorSurface
 }
 
 int findNearestPoint(glm::vec3& point, std::vector<glm::vec3>& controlPoints) {
-	float minDistance = 0.2f;
+	float minDistance = 0.3f;
 	int nearestIndex = -1;
 
 	for (size_t i = 0; i < controlPoints.size(); ++i) {
@@ -601,9 +586,9 @@ int main() {
 	};
 
 	std::vector<std::vector<glm::vec3>> controlPointsTensor2 = {
-		{ { -1.5f, -1.0f, 0.0f }, { -0.5f, -1.0f, 1.2f }, {  0.5f, -1.0f, 0.8f }, {  1.5f, -1.0f, 0.0f } },
-		{ { -1.5f,  0.0f, 1.5f }, { -0.5f,  0.0f, 2.0f }, {  0.5f,  0.0f, 1.5f }, {  1.5f,  0.0f, 0.5f } },
-		{ { -1.5f,  1.0f, 0.0f }, { -0.5f,  1.0f, 0.5f }, {  0.5f,  1.0f, 0.2f }, {  1.5f,  1.0f, 0.0f } }
+		{ glm::vec3( -1.5f, -1.0f, 0.0f ), glm::vec3( -0.5f, -1.0f, 1.2f ), glm::vec3(  0.5f, -1.0f, 0.8f ), glm::vec3(  1.5f, -1.0f, 0.0f ) },
+		{ glm::vec3( -1.5f,  0.0f, 1.5f ), glm::vec3(-0.5f,  0.0f, 2.0f ), glm::vec3(  0.5f,  0.0f, 1.5f ), glm::vec3(  1.5f,  0.0f, 0.5f ) },
+		{ glm::vec3( -1.5f,  1.0f, 0.0f ), glm::vec3(-0.5f,  1.0f, 0.5f ), glm::vec3(  0.5f,  1.0f, 0.2f ), glm::vec3(  1.5f,  1.0f, 0.0f ) }
 	};
 
 	std::vector<std::vector<glm::vec3>> TensorProductSurface1 = generateTensorSurface(controlPointsTensor1, 20, 20);
@@ -711,13 +696,8 @@ int main() {
 
 			if (changes.clicked && !changes.cameraEnabled && mode == GLFW_KEY_M){
 				int pointIndexToMove = findNearestPoint(changes.newMouseClickLocation, cp_positions_vector);
-				Log::info("MovementX: {}, MovementY: {}", changes.movementX, changes.movementY);
 				if (pointIndexToMove != -1){
-					cp_positions_vector.at(pointIndexToMove) = glm::vec3(
-						cp_positions_vector.at(pointIndexToMove).x + changes.movementX,
-						cp_positions_vector.at(pointIndexToMove).y + changes.movementY,
-						0.f
-					);
+					cp_positions_vector.at(pointIndexToMove) = changes.moveTo;
 				}
 			}
 
