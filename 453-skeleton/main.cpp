@@ -468,8 +468,6 @@ std::vector<std::vector<glm::vec3>> generateTensorSurface(std::vector<std::vecto
     return surface;
 }
 
-
-
 void makeTensorVertices(const std::vector<std::vector<glm::vec3>>& tensorSurface, std::vector<glm::vec3>& flattenedVertices) {
     int rows = tensorSurface.size();
     int cols = tensorSurface[0].size();
