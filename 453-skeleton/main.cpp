@@ -135,19 +135,26 @@ int main() {
 
 	float root2over2 = powf(2, 0.5) / 2.f;
 	float root3over2 = powf(3, 0.5) / 2.f;
+	float cos15 = (powf(3, 0.5) + 1) / (2 * powf(2, 0.5)); // 0.9659...
+	float sin15 = (powf(3, 0.5) - 1) / (2 * powf(2, 0.5)); // 0.2588...
 
 	std::vector<glm::vec3> sphereCoords = std::vector<glm::vec3>();
 	sphereCoords.push_back(glm::vec3(0.f,-1.f,0.f));
+	sphereCoords.push_back(glm::vec3(sin15,-cos15,0.f));
 	sphereCoords.push_back(glm::vec3(0.5f,-root3over2,0.f));
 	sphereCoords.push_back(glm::vec3(root2over2,-root2over2,0.f));
 	sphereCoords.push_back(glm::vec3(root3over2,-0.5f,0.f));
+	sphereCoords.push_back(glm::vec3(cos15,-sin15,0.f));
 	sphereCoords.push_back(glm::vec3(1.f,0.f,0.f));
+	sphereCoords.push_back(glm::vec3(cos15,sin15,0.f));
 	sphereCoords.push_back(glm::vec3(root3over2,0.5f,0.f));
 	sphereCoords.push_back(glm::vec3(root2over2,root2over2,0.f));
 	sphereCoords.push_back(glm::vec3(0.5f,root3over2,0.f));
+	sphereCoords.push_back(glm::vec3(sin15,cos15,0.f));
 	sphereCoords.push_back(glm::vec3(0.f,1.f,0.f));
 
-	std::vector<glm::vec3> Sphere3D = createSurfaceOfRevolution(sphereCoords, 16);
+	// the number of slices is chosen based on the # of slices in the semi unit circle * 2 because it makes the subdivisions along every side equal
+	std::vector<glm::vec3> Sphere3D = createSurfaceOfRevolution(sphereCoords, 24);
 
 	CPU_Geometry sphereCpu;
 	GPU_Geometry sphereGpu;
