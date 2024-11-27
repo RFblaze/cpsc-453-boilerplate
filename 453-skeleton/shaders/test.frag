@@ -3,11 +3,16 @@
 in vec3 fragPos;
 in vec3 fragColor;
 in vec3 n;
+in vec2 tc;
 
 //uniform vec3 lightPosition;
+uniform sampler2D sampler;
 
 out vec4 color;
 
 void main() {
-	color = vec4(fragColor, 1.0);
+	vec4 d = texture(sampler, tc);
+	if (d.a < 0.01)
+	discard;
+	color = d;
 }

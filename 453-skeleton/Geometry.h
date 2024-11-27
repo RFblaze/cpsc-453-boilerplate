@@ -22,6 +22,7 @@ struct CPU_Geometry {
 	std::vector<glm::vec3> verts;
 	std::vector<glm::vec3> cols;
 	std::vector<glm::vec3> normals;
+	std::vector<glm::vec2> texCoords;
 };
 
 
@@ -37,6 +38,7 @@ public:
 	void setVerts(const std::vector<glm::vec3>& verts);
 	void setCols(const std::vector<glm::vec3>& cols);
 	void setNormals(const std::vector<glm::vec3>& norms);
+	void setTexCoords(const std::vector<glm::vec2>& texCoords);
 
 private:
 	// note: due to how OpenGL works, vao needs to be
@@ -46,4 +48,5 @@ private:
 	VertexBuffer vertBuffer;
 	VertexBuffer colorsBuffer;
 	VertexBuffer normalsBuffer;
+	VertexBuffer texCoordBuffer;
 };
