@@ -1,81 +1,84 @@
+//#include <GL/glew.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <string>
+#include <list>
+#include <vector>
+#include <limits>
+#include <functional>
 
 #include "Geometry.h"
 #include "GLDebug.h"
 #include "Log.h"
 #include "ShaderProgram.h"
 #include "Shader.h"
+#include "Texture.h"
 #include "Window.h"
+#include "Camera.h"
 
-struct TriangleData {
-	float increment = 0.1f;
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
-	glm::vec3 point1 = glm::vec3(-0.5f, -0.5f, 0.f);
-	glm::vec3 point2 = glm::vec3(0.5f, -0.5f, 0.f);
-	glm::vec3 point3 = glm::vec3(0.f, 0.5f, 0.f);
-
-	bool isDifferent(TriangleData newData){
-		return point1 != newData.point1 ||
-		point2 != newData.point2 ||
-		point3 != newData.point3;
-	}
-
-};
+#include "UnitCube.h"
 
 // EXAMPLE CALLBACKS
-class MyCallbacks : public CallbackInterface {
+class Assignment4 : public CallbackInterface {
 
 public:
-	MyCallbacks(ShaderProgram& shader) : shader(shader){}
+	Assignment4()
+		: camera(glm::radians(45.f), glm::radians(45.f), 3.0)
+		, aspect(1.0f)
+		, rightMouseDown(false)
+		, mouseOldX(0.0)
+		, mouseOldY(0.0)
+	{}
 
-	virtual void keyCallback(int key, int scancode, int action, int mods) {
-		if (action == GLFW_PRESS){
-			
-			if (key == GLFW_KEY_R ) {
-				shader.recompile();
-			}
-
-			if (key == GLFW_KEY_UP){
-				std::cout << "press up" << std::endl;
-				triangleData.point1.y += triangleData.increment;
-				triangleData.point2.y += triangleData.increment;
-				triangleData.point3.y += triangleData.increment;
-			}
-
-			if (key == GLFW_KEY_DOWN){
-				std::cout << "press down" << std::endl;
-				triangleData.point1.y -= triangleData.increment;
-				triangleData.point2.y -= triangleData.increment;
-				triangleData.point3.y -= triangleData.increment;
-			}
-
-			if (key == GLFW_KEY_LEFT){
-				std::cout << "press left" << std::endl;
-				triangleData.point1.x -= triangleData.increment;
-				triangleData.point2.x -= triangleData.increment;
-				triangleData.point3.x -= triangleData.increment;
-			}
-
-			if (key == GLFW_KEY_RIGHT){
-				std::cout << "press right" << std::endl;
-				triangleData.point1.x += triangleData.increment;
-				triangleData.point2.x += triangleData.increment;
-				triangleData.point3.x += triangleData.increment;
-			}
-		}	
-			
+	virtual void keyCallback(int key, int scancode, int action, int mods) {}
+	virtual void mouseButtonCallback(int button, int action, int mods) {
+		if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+			if (action == GLFW_PRESS)			rightMouseDown = true;
+			else if (action == GLFW_RELEASE)	rightMouseDown = false;
+		}
+	}
+	virtual void cursorPosCallback(double xpos, double ypos) {
+		if (rightMouseDown) {
+			camera.incrementTheta(ypos - mouseOldY);
+			camera.incrementPhi(xpos - mouseOldX);
+		}
+		mouseOldX = xpos;
+		mouseOldY = ypos;
+	}
+	virtual void scrollCallback(double xoffset, double yoffset) {
+		camera.incrementR(yoffset);
+	}
+	virtual void windowSizeCallback(int width, int height) {
+		// The CallbackInterface::windowSizeCallback will call glViewport for us
+		CallbackInterface::windowSizeCallback(width,  height);
+		aspect = float(width)/float(height);
 	}
 
-	TriangleData getTriangleData(){
-		return triangleData;
+	void viewPipeline(ShaderProgram &sp) {
+		glm::mat4 M = glm::mat4(1.0);
+		glm::mat4 V = camera.getView();
+		glm::mat4 P = glm::perspective(glm::radians(45.0f), aspect, 0.01f, 1000.f);
+		//GLint location = glGetUniformLocation(sp, "lightPosition");
+		//glm::vec3 light = camera.getPos();
+		//glUniform3fv(location, 1, glm::value_ptr(light));
+		GLint uniMat = glGetUniformLocation(sp, "M");
+		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(M));
+		uniMat = glGetUniformLocation(sp, "V");
+		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(V));
+		uniMat = glGetUniformLocation(sp, "P");
+		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(P));
 	}
-
+	Camera camera;
 private:
-	ShaderProgram& shader;
-	TriangleData triangleData;
+	bool rightMouseDown;
+	float aspect;
+	double mouseOldX;
+	double mouseOldY;
 };
 
 int main() {
@@ -83,74 +86,40 @@ int main() {
 
 	// WINDOW
 	glfwInit();
-	Window window(800, 800, "CPSC 453"); // can set callbacks at construction if desired
+	Window window(800, 800, "CPSC 453 - Assignment 3");
 
 	GLDebug::enable();
 
-	// SHADERS
+	// CALLBACKS
+	auto a4 = std::make_shared<Assignment4>();
+	window.setCallbacks(a4);
+
 	ShaderProgram shader("shaders/test.vert", "shaders/test.frag");
 
-	// CALLBACKS
-	std::shared_ptr<MyCallbacks> callbacks = std::make_shared<MyCallbacks>(shader);
-	window.setCallbacks(callbacks); // can also update callbacks to new ones
-
-	// GEOMETRY
-	CPU_Geometry cpuGeom;
-	GPU_Geometry gpuGeom;
-
-	// vertices
-	// middle
-	
-	cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f));
-	cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f));
-	cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f));
-
-	// colours (these should be in linear space)
-	// middle
-	cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); // red
-	cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f)); // green
-	cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f)); // blue
-	
-
-	gpuGeom.setVerts(cpuGeom.verts);
-	gpuGeom.setCols(cpuGeom.cols);
-
-	TriangleData currTriangle; 
+	UnitCube cube;
+	cube.generateGeometry();
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
 		glfwPollEvents();
 
-		TriangleData newTriangle = callbacks->getTriangleData();
-		if (currTriangle.isDifferent(newTriangle)){
-
-			cpuGeom.verts.push_back(newTriangle.point1);
-			cpuGeom.verts.push_back(newTriangle.point2);
-			cpuGeom.verts.push_back(newTriangle.point3);
-
-			cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f)); // red
-			cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f)); // green
-			cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f)); // blue
-
-			gpuGeom.setVerts(cpuGeom.verts);
-			gpuGeom.setCols(cpuGeom.cols);
-
-		}
-
-		currTriangle = newTriangle;
-
+		glEnable(GL_LINE_SMOOTH);
+		glEnable(GL_FRAMEBUFFER_SRGB);
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL /*GL_LINE*/);
 
 		shader.use();
-		gpuGeom.bind();
 
-		glEnable(GL_FRAMEBUFFER_SRGB);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // rightmost number means number of vertices
+		a4->viewPipeline(shader);
+
+		cube.m_gpu_geom.bind();
+		glDrawArrays(GL_TRIANGLES, 0, GLsizei(cube.m_size));
+
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
-
 		window.swapBuffers();
 	}
-
 	glfwTerminate();
 	return 0;
 }

@@ -1,8 +1,13 @@
 #version 330 core
+
+in vec3 fragPos;
+in vec3 fragColor;
+in vec3 n;
+
+//uniform vec3 lightPosition;
+
 out vec4 color;
 
-in vec3 C;
-
 void main() {
-	color = vec4(C, 1.0f);
-} 
+	color = vec4(fragColor, 1.0);
+}

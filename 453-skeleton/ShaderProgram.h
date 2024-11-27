@@ -4,7 +4,9 @@
 
 #include "GLHandles.h"
 
+//#include <GL/glew.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #include <string>
 
@@ -26,6 +28,10 @@ public:
 	void use() const { glUseProgram(programID); }
 
 	void friend attach(ShaderProgram& sp, Shader& s);
+
+	operator GLuint() const {
+		return programID;
+	}
 
 private:
 	ShaderProgramHandle programID;

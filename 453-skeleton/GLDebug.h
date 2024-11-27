@@ -1,5 +1,7 @@
 #pragma once
+//#include <GL/glew.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 //------------------------------------------------------------------------------
 // OpenGL has a mechanism where you can turn on debug mode and it will tell you

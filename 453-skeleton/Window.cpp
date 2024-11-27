@@ -1,6 +1,9 @@
 #include "Window.h"
 
 #include "Log.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
 #include <iostream>
 
@@ -66,6 +69,12 @@ Window::Window(
 	glfwMakeContextCurrent(window.get());
 
 	// initialize OpenGL extensions for the current context (this window)
+	/*GLenum err = glewInit();
+	if (err != GLEW_OK) {
+		Log::error("WINDOW glewInit error:{}", glewGetErrorString(err));
+		throw std::runtime_error("Failed to initialize GLEW");
+	}*/
+	// initialize OpenGL extensions for the current context (this window)
 	if (!gladLoadGL()) {
 		throw std::runtime_error("Failed to initialize GLAD");
 	}
@@ -75,6 +84,14 @@ Window::Window(
 	if (callbacks != nullptr) {
 		connectCallbacks();
 	}
+
+	// Standard ImGui/GLFW middleware
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window.get(), true);
+	ImGui_ImplOpenGL3_Init("#version 330 core");
 }
 
 

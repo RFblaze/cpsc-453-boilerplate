@@ -2,7 +2,6 @@
 #include "Log.h"
 
 #include <regex>
-#include <glad/glad.h>
 
 void GLDebug::debugOutputHandler(
 	GLenum source,

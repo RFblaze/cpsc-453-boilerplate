@@ -16,6 +16,9 @@ set(OpenGL_GL_PREFERENCE GLVND)
 include_directories(SYSTEM thirdparty/argh-1.3.1/)
 
 #-------------------------------------------------------------------------------
+# http://glew.sourceforge.net/
+# include_directories(SYSTEM thirdparty/glew-2.1.0/include)
+
 # https://glad.dav1d.de/
 add_subdirectory(thirdparty/glad)
 set(LIBRARIES ${LIBRARIES} glad)
@@ -48,6 +51,8 @@ add_subdirectory(thirdparty/fmt-7.0.3)
 set(LIBRARIES ${LIBRARIES} fmt::fmt)
 include_directories(SYSTEM thirdparty/fmt-7.0.3/include)
 
+include_directories(SYSTEM thirdparty/stb-2.26)
+include_directories(SYSTEM thirdparty/imgui-1.78)
 
 find_package(OpenGL REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${OPENGL_gl_LIBRARY})
@@ -57,7 +62,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-Wall" "-pedantic")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	# using GCC
-	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-fdiagnostics-color=always" "-Wall" "-pedantic" "-Wconversion")
+	list(APPEND _453_CMAKE_CXX_FLAGS ${_453_CMAKE_CXX_FLAGS} "-fdiagnostics-color=always" "-Wall" "-pedantic")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 	# using Intel C++
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
@@ -74,14 +79,15 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
 endif()
 
-if(UNIX)
+if(APPLE)
+	set(LIBRARIES ${LIBRARIES} pthread dl)
+elseif(UNIX)
 	set(LIBRARIES ${LIBRARIES} pthread GL dl)
-endif(UNIX)
-if (WIN32)
+elseif(WIN32)
 endif()
 
 
-# add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD=ON)
+add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD=ON)
 # include_directories(SYSTEM thirdparty/imgui thirdparty/imgui/examples)
 # include_directories(src)
 
@@ -89,10 +95,12 @@ endif()
 # Compile our main application
 file(GLOB SOURCES
     453-skeleton/*
+    #thirdparty/glew-2.1.0/src/glew.c
+	thirdparty/imgui-1.78/imgui/*.cpp
 )
 set(INCLUDES ${INCLUDES} src)
 
-set(APP_NAME "453-skeleton")
+set(APP_NAME "453-skeleton-program")
 
 
 # Copy all the shaders and tell the build system to re-run CMAKE if one of them changes
@@ -100,6 +108,12 @@ file(GLOB files 453-skeleton/shaders/*)
 foreach(file ${files})
 	get_filename_component(name ${file} NAME)
 	configure_file(${file} shaders/${name})
+endforeach()
+
+file(GLOB files_t textures/*)
+foreach(file ${files_t})
+	get_filename_component(name ${file} NAME)
+	configure_file(${file} textures/${name} COPYONLY)
 endforeach()
 
 add_executable(${APP_NAME} ${SOURCES})
