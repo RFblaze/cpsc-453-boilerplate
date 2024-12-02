@@ -274,11 +274,6 @@ int main() {
 	std::vector<glm::vec2> SphereTexCoords;
 	std::vector<glm::vec3> Sphere3D = createSurfaceOfRevolution(sphereCoords, SphereTexCoords, 24);
 
-	// std::vector<glm::vec3> cols = std::vector<glm::vec3>();
-	// for (int i = 0; i < int(Sphere3D.size()); i++){
-	// 	cols.push_back(glm::vec3(0.f,0.f,0.f));
-	// }
-
 	CelestialBody sun = CelestialBody("textures/2k_sun.jpg", GL_LINEAR, Sphere3D);
 	CelestialBody skybox = CelestialBody("textures/2k_stars.jpg", GL_LINEAR, Sphere3D);
 	CelestialBody earth = CelestialBody("textures/2k_earth_daymap.jpg", GL_LINEAR, Sphere3D);
@@ -294,12 +289,12 @@ int main() {
 	earth.cgeom.texCoords = SphereTexCoords;
 	earth.ggeom.setTexCoords(earth.cgeom.texCoords);
 	earth.setScale(0.5f);
-	earth.setPosition(glm::vec3(0.f,3.f,0.f));
+	earth.setPosition(glm::vec3(3.f,0.f,0.f));
 
 	moon.cgeom.texCoords = SphereTexCoords;
 	moon.ggeom.setTexCoords(moon.cgeom.texCoords);
 	moon.setScale(0.1f);
-	moon.setPosition(glm::vec3(0.f,4.f,0.f));
+	moon.setPosition(glm::vec3(3.8f,0.f,0.f));
 
 	for (size_t i = 0; i < sun.cgeom.texCoords.size(); ++i) {
     	std::cout << "TexCoord[" << i << "]: (" << sun.cgeom.texCoords[i].x << ", " << sun.cgeom.texCoords[i].y << ")\n";
