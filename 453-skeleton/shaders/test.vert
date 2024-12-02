@@ -5,6 +5,8 @@ layout (location = 2) in vec3 normal;
 layout (location = 3) in vec2 texCoord;
 
 uniform mat4 M;
+
+// These are for the camera; view & perspective matrices
 uniform mat4 V;
 uniform mat4 P;
 

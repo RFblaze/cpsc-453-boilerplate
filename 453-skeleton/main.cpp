@@ -81,14 +81,22 @@ private:
 	double mouseOldY;
 };
 
-std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& CurvePoints, int numSlices) {
+std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& CurvePoints, std::vector<glm::vec2>& TexCoords, int numSlices) {
     std::vector<glm::vec3> surfaceVertices;
     float angleStep = glm::radians(360.0f / numSlices);
+
+	float uStep = (1.f / float(numSlices)); 		// 1/24 in the horizontal 
+	float vStep = (1.f / float(numSlices)) * 2.f; 	// 1/12 in the vertical
+
+	float u = 0;
+	float v = 0;
 
     // For each point in the original curve
     for (size_t i = 0; i < CurvePoints.size() - 1; ++i) {
         glm::vec3 bottom1 = CurvePoints[i];
         glm::vec3 bottom2 = CurvePoints[i + 1];
+
+		float v2 = v + vStep;
 
         // Create triangles for each slice around the revolution axis
         for (int slice = 0; slice < numSlices; ++slice) {
@@ -110,7 +118,23 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& C
             surfaceVertices.push_back(p3);
             surfaceVertices.push_back(p2);
             surfaceVertices.push_back(p4);
+
+			// Now Texture coordinates
+			float u2 = u + uStep;
+
+			TexCoords.push_back(glm::vec2(u, v));
+			TexCoords.push_back(glm::vec2(u2, v2));
+			TexCoords.push_back(glm::vec2(u, v2));
+
+			TexCoords.push_back(glm::vec2(u, v2));
+			TexCoords.push_back(glm::vec2(u2, v));
+			TexCoords.push_back(glm::vec2(u2, v2));
+			
+			u += uStep;
         }
+
+		u = 0;
+		v += vStep;
     }
     return surfaceVertices;
 }
@@ -118,12 +142,12 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& C
 std::vector<glm::vec2> createTextureCoordinates(const std::vector<glm::vec3>& CurvePoints, int numSlices) {
     std::vector<glm::vec2> texCoords;
 
-    size_t numCurvePoints = CurvePoints.size();
+    int numCurvePoints = CurvePoints.size();
     float uStep = 1.0f / float(numSlices);          // Step size for the u-coordinate
     float vStep = 1.0f / float(numCurvePoints - 1); // Step size for the v-coordinate
 
     // Loop through all points in the curve
-    for (size_t i = 0; i < numCurvePoints - 1; ++i) {
+    for (int i = 0; i < numCurvePoints - 1; ++i) {
         float v1 = i * vStep;           // v-coordinate for the current point
         float v2 = (i + 1) * vStep;     // v-coordinate for the next point
 
@@ -154,10 +178,10 @@ struct CelestialBody{
 	glm::vec3 position = {0.f,0.f,0.f};
 	glm::vec3 axis_tilt = {0.f,0.f,0.f};
 
-	glm::mat4 scale = glm::mat4(1.f);
-	glm::mat4 tilt;
-	glm::mat4 rotation;
-	glm::mat4 translation;
+	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(1.f,1.f,1.f));
+	glm::mat4 tilt = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
+	glm::mat4 rotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	glm::mat4 translation = glm::translate(glm::mat4(1.f), position);
 
 	// Tutorial
 	// glm::mat4 Mscale;
@@ -170,24 +194,23 @@ struct CelestialBody{
 
 	std::vector<CelestialBody*> children;
 
-	CelestialBody(std::string texturePath, GLint interpolation, std::vector<glm::vec3> sphere, std::vector<glm::vec3> cols) : 
+	CelestialBody(std::string texturePath, GLint interpolation, std::vector<glm::vec3> sphere) : 
 		texture(texturePath, interpolation){
 			cgeom.verts = sphere;
-			cgeom.cols = cols;
 			cgeom.normals = sphere;
 
-			// cgeom.texCoords.push_back(glm::vec2(0.f, 1.f));
-			// cgeom.texCoords.push_back(glm::vec2(0.f, 0.f));
-			// cgeom.texCoords.push_back(glm::vec2(1.f, 0.f));
-			// cgeom.texCoords.push_back(glm::vec2(0.f, 1.f));
-			// cgeom.texCoords.push_back(glm::vec2(1.f, 0.f));
-			// cgeom.texCoords.push_back(glm::vec2(1.f, 1.f));
-
 			ggeom.setVerts(sphere);
-			ggeom.setCols(cols);
 			ggeom.setNormals(sphere);
-			ggeom.setTexCoords(cgeom.texCoords);
 
+	}
+
+	void setPosition(glm::vec3 newPos){
+		translation = glm::translate(glm::mat4(1.f), newPos);
+		position = newPos;
+	}
+
+	void setScale(float newScale){
+		scale = glm::scale(glm::mat4(1.f), glm::vec3(newScale, newScale, newScale));
 	}
 
 	glm::mat4 getLocalMatrix(){
@@ -248,20 +271,35 @@ int main() {
 	sphereCoords.push_back(glm::vec3(0.f,1.f,0.f));
 
 	// the number of slices is chosen based on the # of slices in the semi unit circle * 2 because it makes the subdivisions along every side equal
-	std::vector<glm::vec3> Sphere3D = createSurfaceOfRevolution(sphereCoords, 24);
+	std::vector<glm::vec2> SphereTexCoords;
+	std::vector<glm::vec3> Sphere3D = createSurfaceOfRevolution(sphereCoords, SphereTexCoords, 24);
 
-	std::vector<glm::vec3> cols = std::vector<glm::vec3>();
-	for (int i = 0; i < int(Sphere3D.size()); i++){
-		cols.push_back(glm::vec3(0.f,0.f,0.f));
-	}
+	// std::vector<glm::vec3> cols = std::vector<glm::vec3>();
+	// for (int i = 0; i < int(Sphere3D.size()); i++){
+	// 	cols.push_back(glm::vec3(0.f,0.f,0.f));
+	// }
 
-	CelestialBody sun = CelestialBody("textures/2k_sun.jpg", GL_LINEAR, Sphere3D, cols);
-	CelestialBody skybox = CelestialBody("textures/2k_stars.jpg", GL_LINEAR, Sphere3D, cols);
-	CelestialBody earth = CelestialBody("textures/2k_earth_daymap.jpg", GL_LINEAR, Sphere3D, cols);
-	CelestialBody moon = CelestialBody("textures/2k_moon.jpg", GL_LINEAR, Sphere3D, cols);
+	CelestialBody sun = CelestialBody("textures/2k_sun.jpg", GL_LINEAR, Sphere3D);
+	CelestialBody skybox = CelestialBody("textures/2k_stars.jpg", GL_LINEAR, Sphere3D);
+	CelestialBody earth = CelestialBody("textures/2k_earth_daymap.jpg", GL_LINEAR, Sphere3D);
+	CelestialBody moon = CelestialBody("textures/2k_moon.jpg", GL_LINEAR, Sphere3D);
 
-	sun.cgeom.texCoords = createTextureCoordinates(sphereCoords, 24);
+	sun.cgeom.texCoords = SphereTexCoords;
 	sun.ggeom.setTexCoords(sun.cgeom.texCoords);
+
+	skybox.cgeom.texCoords = SphereTexCoords;
+	skybox.ggeom.setTexCoords(skybox.cgeom.texCoords);
+	skybox.setScale(50.f);
+
+	earth.cgeom.texCoords = SphereTexCoords;
+	earth.ggeom.setTexCoords(earth.cgeom.texCoords);
+	earth.setScale(0.5f);
+	earth.setPosition(glm::vec3(0.f,3.f,0.f));
+
+	moon.cgeom.texCoords = SphereTexCoords;
+	moon.ggeom.setTexCoords(moon.cgeom.texCoords);
+	moon.setScale(0.1f);
+	moon.setPosition(glm::vec3(0.f,4.f,0.f));
 
 	for (size_t i = 0; i < sun.cgeom.texCoords.size(); ++i) {
     	std::cout << "TexCoord[" << i << "]: (" << sun.cgeom.texCoords[i].x << ", " << sun.cgeom.texCoords[i].y << ")\n";
@@ -286,16 +324,37 @@ int main() {
 
 		a4->viewPipeline(shader);
 
-		// cube.m_gpu_geom.bind();
-		// glDrawArrays(GL_TRIANGLES, 0, GLsizei(cube.m_size));
-
-		// My attempt at rendering
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		sun.texture.bind();
-
 		sun.ggeom.bind();
+
+		GLint transformMat = glGetUniformLocation(shader, "M");
+
+		glUniformMatrix4fv(transformMat,1,GL_FALSE, glm::value_ptr(sun.getLocalMatrix()));
+
 		glDrawArrays(GL_TRIANGLES, 0, GLsizei(sun.cgeom.verts.size()));
 		sun.texture.unbind();
+
+		skybox.texture.bind();
+		skybox.ggeom.bind();
+
+		glUniformMatrix4fv(transformMat,1,GL_FALSE, glm::value_ptr(skybox.getLocalMatrix()));
+		glDrawArrays(GL_TRIANGLES, 0, GLsizei(skybox.cgeom.verts.size()));
+		skybox.texture.unbind();
+
+		earth.texture.bind();
+		earth.ggeom.bind();
+
+		glUniformMatrix4fv(transformMat,1,GL_FALSE, glm::value_ptr(earth.getLocalMatrix()));
+		glDrawArrays(GL_TRIANGLES, 0, GLsizei(earth.cgeom.verts.size()));
+		earth.texture.unbind();
+
+		moon.texture.bind();
+		moon.ggeom.bind();
+
+		glUniformMatrix4fv(transformMat,1,GL_FALSE, glm::value_ptr(moon.getLocalMatrix()));
+		glDrawArrays(GL_TRIANGLES, 0, GLsizei(moon.cgeom.verts.size()));
+		moon.texture.unbind();
 
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 		window.swapBuffers();
