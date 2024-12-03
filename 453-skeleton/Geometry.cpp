@@ -8,7 +8,7 @@ GPU_Geometry::GPU_Geometry()
 	, vertBuffer(0, 3, GL_FLOAT)
 	, colorsBuffer(1, 3, GL_FLOAT)
 	, normalsBuffer(2, 3, GL_FLOAT)
-	, texCoordBuffer(1, 2, GL_FLOAT)
+	, texCoordBuffer(3, 2, GL_FLOAT)
 {}
 
 
