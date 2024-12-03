@@ -27,6 +27,8 @@
 class Assignment4 : public CallbackInterface {
 
 public:
+
+	// Camera is initialized to start looking at an angle, which is why the planets look like in the wrong position
 	Assignment4()
 		: camera(glm::radians(45.f), glm::radians(45.f), 3.0)
 		, aspect(1.0f)
@@ -63,9 +65,11 @@ public:
 		glm::mat4 M = glm::mat4(1.0);
 		glm::mat4 V = camera.getView();
 		glm::mat4 P = glm::perspective(glm::radians(45.0f), aspect, 0.01f, 1000.f);
-		//GLint location = glGetUniformLocation(sp, "lightPosition");
-		//glm::vec3 light = camera.getPos();
-		//glUniform3fv(location, 1, glm::value_ptr(light));
+
+		GLint location = glGetUniformLocation(sp, "camera");
+		glm::vec3 cameraPos = camera.getPos();
+		glUniform3fv(location, 1, glm::value_ptr(cameraPos));
+
 		GLint uniMat = glGetUniformLocation(sp, "M");
 		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(M));
 		uniMat = glGetUniformLocation(sp, "V");
@@ -74,6 +78,11 @@ public:
 		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(P));
 	}
 	Camera camera;
+
+	glm::mat4 getView(){
+		return camera.getView();
+	}
+
 private:
 	bool rightMouseDown;
 	float aspect;
@@ -242,7 +251,7 @@ int main() {
 	GLDebug::enable();
 
 	// CALLBACKS
-	auto a4 = std::make_shared<Assignment4>();
+	std::shared_ptr<Assignment4> a4 = std::make_shared<Assignment4>();
 	window.setCallbacks(a4);
 
 	ShaderProgram shader("shaders/test.vert", "shaders/test.frag");
@@ -304,6 +313,12 @@ int main() {
 	sun.children.push_back(&earth);
 	earth.children.push_back(&moon);
 
+	// Phong Shading set-up
+
+	glm::vec3 lightPos = glm::vec3(0.f,0.f,0.f);
+
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.f, 0.01f, 1000.f);
+
 	// RENDER LOOP
 	while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -318,8 +333,14 @@ int main() {
 		shader.use();
 
 		a4->viewPipeline(shader);
+		glm::mat4 viewMat = a4->getView();
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		// Sun
+		// Disable shading
+		glUniform1i(glGetUniformLocation(shader, "useShading"), 0);
+
 		sun.texture.bind();
 		sun.ggeom.bind();
 
@@ -330,6 +351,10 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, GLsizei(sun.cgeom.verts.size()));
 		sun.texture.unbind();
 
+		// Skybox
+		// Re-enable shading
+		glUniform1i(glGetUniformLocation(shader, "useShading"), 1);
+
 		skybox.texture.bind();
 		skybox.ggeom.bind();
 
@@ -337,6 +362,7 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, GLsizei(skybox.cgeom.verts.size()));
 		skybox.texture.unbind();
 
+		// Earth
 		earth.texture.bind();
 		earth.ggeom.bind();
 
@@ -344,6 +370,7 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, GLsizei(earth.cgeom.verts.size()));
 		earth.texture.unbind();
 
+		// Moon
 		moon.texture.bind();
 		moon.ggeom.bind();
 
