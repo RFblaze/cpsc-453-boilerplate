@@ -69,6 +69,7 @@ public:
 		GLint location = glGetUniformLocation(sp, "camera");
 		glm::vec3 cameraPos = camera.getPos();
 		glUniform3fv(location, 1, glm::value_ptr(cameraPos));
+		// std::cout << "camera.getPos(): " << "( " << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << std::endl;
 
 		GLint uniMat = glGetUniformLocation(sp, "M");
 		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(M));
@@ -312,12 +313,6 @@ int main() {
 	// Define transformation hierarchies so that the transformations are relative to parents
 	sun.children.push_back(&earth);
 	earth.children.push_back(&moon);
-
-	// Phong Shading set-up
-
-	glm::vec3 lightPos = glm::vec3(0.f,0.f,0.f);
-
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.f, 0.01f, 1000.f);
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {

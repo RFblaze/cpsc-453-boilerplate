@@ -29,22 +29,24 @@ void main() {
 	vec3 lightPosition = vec3(0.0, 0.0, 0.0);
 	vec3 lightColor = vec3(1.0, 1.0, 1.0);
 
-	// Diffuse Lighting
+	// Diffuse Lighting (what is Ld in the formula)
+	float kd = 0.5;
+	// float ld = 0.5; // light intensity
 	vec3 lightDirection = normalize(lightPosition - fragPos);
-	vec3 diffuse = lightColor * max(dot(norm, lightDirection), 0.0);
+	vec3 diffuse = kd * max(dot(norm, lightDirection), 0.0) * lightColor;
 
 	// Specular Lighting
-	float ks = 0.5;
-	float alpha = 32;
+	float ks = 0.8;
+	float alpha = 5;
 	vec3 viewDir = normalize(cameraPos - fragPos);
-	vec3 r = reflect(-lightDirection, norm);
-	vec3 specular = ks * pow(max(dot(norm, r), 0), alpha) * lightColor;
+	vec3 r = 2 * dot(norm, lightDirection) * norm - lightDirection;
+	vec3 specular = ks * pow(max(dot(viewDir, r), 0), alpha) * lightColor;
 
 	// Ambient lighting
-    float ambientStrength = 0.3;
+    float ambientStrength = 0.075;
     vec3 ambient = ambientStrength * lightColor;
 
-	vec3 phong = diffuse + ambient + specular;
+	vec3 phong = diffuse + specular + ambient;
 	vec3 phongWithTexture = phong * vec3(d);
 
 	color = vec4(phongWithTexture, d.a);

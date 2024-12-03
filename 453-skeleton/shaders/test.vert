@@ -22,9 +22,11 @@ void main() {
 	tc = texCoord;
 	fragColor = color;
 	n = normal;
+	
 
 	// Converting to world space
-	cameraPos = vec3(M * vec4(camera, 1.0));
 	fragPos = vec3(M * vec4(pos, 1.0));
+	cameraPos = camera;
+
 	gl_Position = P * V * M * vec4(pos, 1.0);
 }
