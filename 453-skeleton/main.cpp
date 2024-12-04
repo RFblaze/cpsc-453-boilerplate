@@ -98,7 +98,7 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& C
 	float uStep = (1.f / float(numSlices)); 		// 1/24 in the horizontal 
 	float vStep = (1.f / float(numSlices)) * 2.f; 	// 1/12 in the vertical
 
-	float u = 0;
+	float u = 1;
 	float v = 0;
 
     // For each point in the original curve
@@ -130,7 +130,7 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& C
             surfaceVertices.push_back(p4);
 
 			// Now Texture coordinates
-			float u2 = u + uStep;
+			float u2 = u - uStep;
 
 			TexCoords.push_back(glm::vec2(u, v));
 			TexCoords.push_back(glm::vec2(u2, v));
@@ -140,45 +140,15 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& C
 			TexCoords.push_back(glm::vec2(u2, v));
 			TexCoords.push_back(glm::vec2(u2, v2));
 			
-			u += uStep;
+			u -= uStep;
         }
 
-		u = 0;
+		u = 1;
 		v += vStep;
     }
     return surfaceVertices;
 }
 
-std::vector<glm::vec2> createTextureCoordinates(const std::vector<glm::vec3>& CurvePoints, int numSlices) {
-    std::vector<glm::vec2> texCoords;
-
-    int numCurvePoints = CurvePoints.size();
-    float uStep = 1.0f / float(numSlices);          // Step size for the u-coordinate
-    float vStep = 1.0f / float(numCurvePoints - 1); // Step size for the v-coordinate
-
-    // Loop through all points in the curve
-    for (int i = 0; i < numCurvePoints - 1; ++i) {
-        float v1 = i * vStep;           // v-coordinate for the current point
-        float v2 = (i + 1) * vStep;     // v-coordinate for the next point
-
-        // Loop through slices
-        for (int slice = 0; slice < numSlices; ++slice) {
-            float u1 = slice * uStep;           // u-coordinate for the current slice
-            float u2 = (slice + 1) * uStep;     // u-coordinate for the next slice
-
-            // Texture coordinates for the two triangles forming the quad
-            texCoords.push_back(glm::vec2(u1, v1)); // Bottom-left
-            texCoords.push_back(glm::vec2(u2, v1)); // Bottom-right
-            texCoords.push_back(glm::vec2(u1, v2)); // Top-left
-
-            texCoords.push_back(glm::vec2(u1, v2)); // Top-left
-            texCoords.push_back(glm::vec2(u2, v1)); // Bottom-right
-            texCoords.push_back(glm::vec2(u2, v2)); // Top-right
-        }
-    }
-
-    return texCoords;
-}
 
 struct CelestialBody{
 	CPU_Geometry cgeom;
