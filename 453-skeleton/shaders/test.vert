@@ -21,11 +21,15 @@ out vec3 cameraPos;
 void main() {
 	tc = texCoord;
 	fragColor = color;
-	n = normal;
-	
 
-	// Converting to world space
+	// Normals to world space
+	mat3 normalMatrix = mat3(transpose(inverse(M))); // Inverse transpose of M
+    n = normalize(normalMatrix * normal);
+	
+	// Position to world space
 	fragPos = vec3(M * vec4(pos, 1.0));
+
+	// Camera position to world space
 	cameraPos = camera;
 
 	gl_Position = P * V * M * vec4(pos, 1.0);
