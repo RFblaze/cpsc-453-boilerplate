@@ -133,7 +133,7 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& C
 			float u2 = u + uStep;
 
 			TexCoords.push_back(glm::vec2(u, v));
-			TexCoords.push_back(glm::vec2(u2, v2));
+			TexCoords.push_back(glm::vec2(u2, v));
 			TexCoords.push_back(glm::vec2(u, v2));
 
 			TexCoords.push_back(glm::vec2(u, v2));
