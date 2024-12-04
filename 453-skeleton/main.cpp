@@ -23,6 +23,12 @@
 
 #include "UnitCube.h"
 
+
+struct Parameters{
+	bool isPlaying =true;
+	float playbackSpeed = 1.f;
+};
+
 // EXAMPLE CALLBACKS
 class Assignment4 : public CallbackInterface {
 
@@ -37,7 +43,21 @@ public:
 		, mouseOldY(0.0)
 	{}
 
-	virtual void keyCallback(int key, int scancode, int action, int mods) {}
+	virtual void keyCallback(int key, int scancode, int action, int mods) {
+		// Spacebar toggles between Pause/Play
+		if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
+			this->UserInput.isPlaying = !this->UserInput.isPlaying;
+		}
+
+		// Left and right arrow keys decrease/increase playback speed
+		if (key == GLFW_KEY_LEFT && action == GLFW_PRESS){
+			this->UserInput.playbackSpeed -= 0.1;
+		}
+
+		if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
+			this->UserInput.playbackSpeed += 0.1;
+		}
+	}
 	virtual void mouseButtonCallback(int button, int action, int mods) {
 		if (button == GLFW_MOUSE_BUTTON_RIGHT) {
 			if (action == GLFW_PRESS)			rightMouseDown = true;
@@ -84,11 +104,17 @@ public:
 		return camera.getView();
 	}
 
+	Parameters getUserInput(){
+		return this->UserInput;
+	}
+
 private:
 	bool rightMouseDown;
 	float aspect;
 	double mouseOldX;
 	double mouseOldY;
+
+	Parameters UserInput;
 };
 
 std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& CurvePoints, std::vector<glm::vec2>& TexCoords, int numSlices) {
@@ -299,6 +325,8 @@ int main() {
 
 		a4->viewPipeline(shader);
 		glm::mat4 viewMat = a4->getView();
+
+		Parameters userInput = a4->getUserInput();
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
