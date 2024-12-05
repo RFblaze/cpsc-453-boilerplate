@@ -29,7 +29,6 @@ void main() {
 	// Position to world space
 	fragPos = vec3(M * vec4(pos, 1.0));
 
-	// Camera position to world space
 	cameraPos = camera;
 
 	gl_Position = P * V * M * vec4(pos, 1.0);

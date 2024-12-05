@@ -37,7 +37,7 @@ void main() {
 
 	// Specular Lighting
 	float ks = 0.8;
-	float alpha = 5;
+	float alpha = 32;
 	vec3 viewDir = normalize(cameraPos - fragPos);
 	vec3 r = 2 * dot(norm, lightDirection) * norm - lightDirection;
 	vec3 specular = ks * pow(max(dot(viewDir, r), 0), alpha) * lightColor;
