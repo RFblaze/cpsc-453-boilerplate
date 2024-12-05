@@ -181,18 +181,18 @@ struct CelestialBody{
 	GPU_Geometry ggeom;
 	Texture texture;
 
-	glm::vec3 basePosition = {0.f,0.f,0.f};
+	glm::vec3 position = {0.f,0.f,0.f};
 	glm::vec3 axis_tilt = {0.f,0.f,0.f};
+
+	float PlanetRotationSpeed;
+	float OrbitSpeed;
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(1.f,1.f,1.f));
 	glm::mat4 tilt = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
 	glm::mat4 planetRotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
-	glm::mat4 translation = glm::translate(glm::mat4(1.f), basePosition);
+	glm::mat4 translation = glm::translate(glm::mat4(1.f), position);
 	
 	glm::mat4 orbitRotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
-
-	// Comes from the parent's basePosition
-	glm::vec3 orbitPoint = glm::vec3(0.f,0.f,0.f);
 
 	// Tutorial
 	// glm::mat4 Mscale;
@@ -216,7 +216,7 @@ struct CelestialBody{
 
 	void setPosition(glm::vec3 newPos){
 		translation = glm::translate(glm::mat4(1.f), newPos);
-		basePosition = newPos;
+		position = newPos;
 	}
 
 	void setScale(float newScale){
@@ -235,32 +235,29 @@ struct CelestialBody{
 		orbitRotation = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,1.f,0.f));
 	}
 
-	void setOrbitPoint(glm::vec3 point){
-		orbitPoint = point;
-	}
-
 	glm::mat4 getLocalMatrix(){
 		return orbitRotation * translation * tilt * planetRotation * scale;
 	}
 
-	void updateChildren(float tSim){
+	void updateChildren(float tSim, glm::vec3 parentPosition){
 		// runs after the parent has been updated to update the children, and then its children, and so on
 		// for now, just check if parent works
-		for (int i = 0; i < children.size(); i++){
-			children.at(i)->updateLocal(tSim);
+		for (int i = 0; i < int(children.size()); i++){
+			children.at(i)->updateLocal(tSim, parentPosition);
 		}
 	}
 
-	void updateLocal(float tSim){
+	void updateLocal(float tSim, glm::vec3 orbitPoint){
 		// update the local transformation matrix(ces)
-		planetRotation = glm::rotate(planetRotation, glm::radians(tSim * 3.6f), glm::vec3(0.f, 1.f, 0.f));
-		orbitRotation = glm::rotate(orbitRotation, glm::radians(tSim * .036f), glm::vec3(0.f, 1.f, 0.f));
+		planetRotation = glm::rotate(planetRotation, glm::radians(tSim * PlanetRotationSpeed), glm::vec3(0.f, 1.f, 0.f));
+		orbitRotation =  glm::translate(glm::mat4(1.0f), orbitPoint) * glm::rotate(glm::mat4(1.f), glm::radians(tSim * OrbitSpeed), glm::vec3(0.f, 1.f, 0.f)) * glm::translate(glm::mat4(1.0f), -orbitPoint);
 
-		basePosition = (orbitRotation * glm::vec4(basePosition, 1.f));
-		translation = glm::translate(glm::mat4(1.0f), glm::vec3(orbitRotation * glm::vec4(basePosition, 1.f)));
+		position = (orbitRotation * glm::vec4(position, 1.f));
+		translation = glm::translate(glm::mat4(1.0f), glm::vec3(orbitRotation * glm::vec4(position, 1.f)));
+
 
 		// after the local has been done, update the children
-		updateChildren(tSim);
+		updateChildren(tSim, position);
 	}
 	
 };
@@ -314,30 +311,31 @@ int main() {
 
 	sun.cgeom.texCoords = SphereTexCoords;
 	sun.ggeom.setTexCoords(sun.cgeom.texCoords);
-	sun.setOrbitPoint(glm::vec3(0.f,0.f,0.f));
 	sun.setOrbitRotation(0.f);
 	sun.setTilt(0.f);
+	sun.PlanetRotationSpeed = 36.f;
+	sun.OrbitSpeed = 0.f;
 
 	skybox.cgeom.texCoords = SphereTexCoords;
 	skybox.ggeom.setTexCoords(skybox.cgeom.texCoords);
-	// Constants
 	skybox.setScale(50.f);
 
 	earth.cgeom.texCoords = SphereTexCoords;
 	earth.ggeom.setTexCoords(earth.cgeom.texCoords);
-	// Constants
 	earth.setScale(0.5f);
 	earth.setTilt(23.45f);
-	earth.setOrbitPoint(sun.basePosition);
 	earth.setPosition(glm::vec3(3.f,0.f,0.f));
+	earth.PlanetRotationSpeed = 100.f;
+	earth.OrbitSpeed = 10.f;
 
 	moon.cgeom.texCoords = SphereTexCoords;
 	moon.ggeom.setTexCoords(moon.cgeom.texCoords);
 
 	moon.setScale(0.1f);
 	moon.setTilt(13.f);
-	moon.setOrbitPoint(earth.basePosition);
-	moon.setPosition(glm::vec3(3.8f,0.f,0.f));
+	moon.setPosition(glm::vec3(3.8f,1.71f,0.f));
+	moon.PlanetRotationSpeed = 36.f;
+	moon.OrbitSpeed = 20.f;
 	
 
 	// Define transformation hierarchies so that the transformations are relative to parents
@@ -370,7 +368,7 @@ int main() {
 		float tSim = tDelta * userInput.playbackSpeed;
 		std::cout << "tSim:" << tSim << std::endl;
 		tprev = tcurr;
-		sun.updateLocal(tSim);
+		sun.updateLocal(tSim, glm::vec3(0.f,0.f,0.f));
 
 		// Sun
 		// Disable shading
