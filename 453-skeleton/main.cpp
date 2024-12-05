@@ -225,6 +225,7 @@ struct CelestialBody{
 
 	void setTilt(float angle){
 		tilt = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,0.f,1.f));
+		axis_tilt = (tilt, glm::vec4(1.f));
 	}
 
 	void setRotation(float angle){
@@ -239,15 +240,15 @@ struct CelestialBody{
 		return orbitRotation * translation * tilt * planetRotation * scale;
 	}
 
-	void updateChildren(float tSim, glm::vec3 parentPosition){
+	void updateChildren(float tSim, glm::vec3 parentPosition, glm::vec3 parentTilt){
 		// runs after the parent has been updated to update the children, and then its children, and so on
 		// for now, just check if parent works
 		for (int i = 0; i < int(children.size()); i++){
-			children.at(i)->updateLocal(tSim, parentPosition);
+			children.at(i)->updateLocal(tSim, parentPosition, parentTilt);
 		}
 	}
 
-	void updateLocal(float tSim, glm::vec3 orbitPoint){
+	void updateLocal(float tSim, glm::vec3 orbitPoint, glm::vec3 orbitalAxis){
 		// update the local transformation matrix(ces)
 		planetRotation = glm::rotate(planetRotation, glm::radians(tSim * PlanetRotationSpeed), glm::vec3(0.f, 1.f, 0.f));
 		orbitRotation =  glm::translate(glm::mat4(1.0f), orbitPoint) * glm::rotate(glm::mat4(1.f), glm::radians(tSim * OrbitSpeed), glm::vec3(0.f, 1.f, 0.f)) * glm::translate(glm::mat4(1.0f), -orbitPoint);
@@ -257,7 +258,7 @@ struct CelestialBody{
 
 
 		// after the local has been done, update the children
-		updateChildren(tSim, position);
+		updateChildren(tSim, position, axis_tilt);
 	}
 	
 };
@@ -335,7 +336,7 @@ int main() {
 	moon.setTilt(13.f);
 	moon.setPosition(glm::vec3(3.8f,1.71f,0.f));
 	moon.PlanetRotationSpeed = 36.f;
-	moon.OrbitSpeed = 20.f;
+	moon.OrbitSpeed = 200.f;
 	
 
 	// Define transformation hierarchies so that the transformations are relative to parents
@@ -368,7 +369,7 @@ int main() {
 		float tSim = tDelta * userInput.playbackSpeed;
 		std::cout << "tSim:" << tSim << std::endl;
 		tprev = tcurr;
-		sun.updateLocal(tSim, glm::vec3(0.f,0.f,0.f));
+		sun.updateLocal(tSim, glm::vec3(0.f,0.f,0.f), glm::vec3(0.f,1.f,0.f));
 
 		// Sun
 		// Disable shading
