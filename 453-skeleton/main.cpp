@@ -181,21 +181,25 @@ struct CelestialBody{
 	GPU_Geometry ggeom;
 	Texture texture;
 
-	glm::vec3 position = {0.f,0.f,0.f};
+	glm::vec3 basePosition = {0.f,0.f,0.f};
 	glm::vec3 axis_tilt = {0.f,0.f,0.f};
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(1.f,1.f,1.f));
-	glm::mat4 tilt = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
-	glm::mat4 rotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
-	glm::mat4 translation = glm::translate(glm::mat4(1.f), position);
+	glm::mat4 tilt = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,0.f,1.f));
+	glm::mat4 planetRotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
+	glm::mat4 translation = glm::translate(glm::mat4(1.f), basePosition);
+	
+	glm::mat4 orbitRotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
+
+	// Comes from the parent's basePosition
+	glm::vec3 orbitPoint = glm::vec3(0.f,0.f,0.f);
 
 	// Tutorial
 	// glm::mat4 Mscale;
-	// glm::mat4 Mb; // axis tilt, axis rotation
 	// Mb = Rotation of axis tilt * Axis rotation (planet rotation)
-	// glm::mat4 Mo
+	// glm::mat4 Mb = tilt * planetRotation;
 	// Mo = Rotation of orbit about the inclination * Translation of p0 (p0 is the planet centre)
-
+	// glm::mat4 Mo = orbitRotation * translation;
 	// p0 = Rotation orbit * Translation from the centre of parent to the centre of local
 
 	std::vector<CelestialBody*> children;
@@ -212,30 +216,54 @@ struct CelestialBody{
 
 	void setPosition(glm::vec3 newPos){
 		translation = glm::translate(glm::mat4(1.f), newPos);
-		position = newPos;
 	}
 
 	void setScale(float newScale){
 		scale = glm::scale(glm::mat4(1.f), glm::vec3(newScale, newScale, newScale));
 	}
 
+	void setTilt(float angle){
+		tilt = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,0.f,1.f));
+	}
+
+	void setRotation(float angle){
+		planetRotation = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,1.f,0.f));
+	}
+
+	void setOrbitRotation(float angle){
+		orbitRotation = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,1.f,0.f));
+	}
+
+	void setOrbitPoint(glm::vec3 point){
+		orbitPoint = point;
+	}
+
 	glm::mat4 getLocalMatrix(){
-		return translation * tilt * rotation * scale;
+		return orbitRotation * translation * tilt * planetRotation * scale;
 	}
 
-	void updateChildren(){
+	void updateChildren(float tSim){
 		// runs after the parent has been updated to update the children, and then its children, and so on
-		for (int i = 0; i < children.size(); i++){
-			children.at(i)->updateLocal();
-		}
+		// for now, just check if parent works
+		return;
+		// for (int i = 0; i < children.size(); i++){
+		// 	children.at(i)->updateLocal(tDelta);
+		// }
 	}
 
-	void updateLocal(){
+	void updateLocal(float tSim){
 		// update the local transformation matrix(ces)
+		planetRotation = glm::rotate(planetRotation, glm::radians(tSim * 3.6f), glm::vec3(0.f, 1.f, 0.f));
+		orbitRotation = glm::rotate(orbitRotation, glm::radians(tSim * 3.6f), glm::vec3(0.f, 1.f, 0.f));
+
+
+		basePosition = (orbitRotation * glm::vec4(basePosition, 1.f));
+		translation = glm::translate(glm::mat4(1.0f), glm::vec3(orbitRotation * glm::vec4(basePosition, 1.f)));
 
 		// after the local has been done, update the children
-		updateChildren();
+		updateChildren(tSim);
 	}
+	
 };
 
 int main() {
@@ -287,39 +315,46 @@ int main() {
 
 	sun.cgeom.texCoords = SphereTexCoords;
 	sun.ggeom.setTexCoords(sun.cgeom.texCoords);
+	sun.setOrbitPoint(glm::vec3(0.f,0.f,0.f));
+	sun.setOrbitRotation(0.f);
+	sun.setTilt(0.f);
 
 	skybox.cgeom.texCoords = SphereTexCoords;
 	skybox.ggeom.setTexCoords(skybox.cgeom.texCoords);
+	// Constants
 	skybox.setScale(50.f);
 
 	earth.cgeom.texCoords = SphereTexCoords;
 	earth.ggeom.setTexCoords(earth.cgeom.texCoords);
+	// Constants
 	earth.setScale(0.5f);
+	earth.setTilt(23.45f);
+
+	// Variables (testing)
 	earth.setPosition(glm::vec3(3.f,0.f,0.f));
+	earth.setRotation(135.f);
+	earth.setOrbitRotation(15.f);
 
 	moon.cgeom.texCoords = SphereTexCoords;
 	moon.ggeom.setTexCoords(moon.cgeom.texCoords);
 	moon.setScale(0.1f);
 	moon.setPosition(glm::vec3(3.8f,0.f,0.f));
 
-	for (size_t i = 0; i < sun.cgeom.texCoords.size(); ++i) {
-    	std::cout << "TexCoord[" << i << "]: (" << sun.cgeom.texCoords[i].x << ", " << sun.cgeom.texCoords[i].y << ")\n";
-	}
-
 	// Define transformation hierarchies so that the transformations are relative to parents
 	sun.children.push_back(&earth);
 	earth.children.push_back(&moon);
 
+	float tprev = glfwGetTime();
+
 	// RENDER LOOP
 	while (!window.shouldClose()) {
 		glfwPollEvents();
-
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
-		// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL /*GL_LINE*/);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		shader.use();
 
@@ -328,7 +363,14 @@ int main() {
 
 		Parameters userInput = a4->getUserInput();
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		float tcurr = glfwGetTime();
+
+		float tDelta = tcurr - tprev;
+		std::cout << "tDelta:" << tDelta << std::endl;
+		float tSim = tDelta * userInput.playbackSpeed;
+		std::cout << "tSim:" << tSim << std::endl;
+		tprev = tcurr;
+		sun.updateLocal(tSim);
 
 		// Sun
 		// Disable shading
