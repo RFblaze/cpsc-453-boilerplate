@@ -216,6 +216,7 @@ struct CelestialBody{
 
 	void setPosition(glm::vec3 newPos){
 		translation = glm::translate(glm::mat4(1.f), newPos);
+		basePosition = newPos;
 	}
 
 	void setScale(float newScale){
@@ -245,17 +246,15 @@ struct CelestialBody{
 	void updateChildren(float tSim){
 		// runs after the parent has been updated to update the children, and then its children, and so on
 		// for now, just check if parent works
-		return;
-		// for (int i = 0; i < children.size(); i++){
-		// 	children.at(i)->updateLocal(tDelta);
-		// }
+		for (int i = 0; i < children.size(); i++){
+			children.at(i)->updateLocal(tSim);
+		}
 	}
 
 	void updateLocal(float tSim){
 		// update the local transformation matrix(ces)
 		planetRotation = glm::rotate(planetRotation, glm::radians(tSim * 3.6f), glm::vec3(0.f, 1.f, 0.f));
-		orbitRotation = glm::rotate(orbitRotation, glm::radians(tSim * 3.6f), glm::vec3(0.f, 1.f, 0.f));
-
+		orbitRotation = glm::rotate(orbitRotation, glm::radians(tSim * .036f), glm::vec3(0.f, 1.f, 0.f));
 
 		basePosition = (orbitRotation * glm::vec4(basePosition, 1.f));
 		translation = glm::translate(glm::mat4(1.0f), glm::vec3(orbitRotation * glm::vec4(basePosition, 1.f)));
@@ -329,16 +328,17 @@ int main() {
 	// Constants
 	earth.setScale(0.5f);
 	earth.setTilt(23.45f);
-
-	// Variables (testing)
+	earth.setOrbitPoint(sun.basePosition);
 	earth.setPosition(glm::vec3(3.f,0.f,0.f));
-	earth.setRotation(135.f);
-	earth.setOrbitRotation(15.f);
 
 	moon.cgeom.texCoords = SphereTexCoords;
 	moon.ggeom.setTexCoords(moon.cgeom.texCoords);
+
 	moon.setScale(0.1f);
+	moon.setTilt(13.f);
+	moon.setOrbitPoint(earth.basePosition);
 	moon.setPosition(glm::vec3(3.8f,0.f,0.f));
+	
 
 	// Define transformation hierarchies so that the transformations are relative to parents
 	sun.children.push_back(&earth);
