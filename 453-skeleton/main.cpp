@@ -58,11 +58,21 @@ public:
 
 		// Left and right arrow keys decrease/increase playback speed
 		if (key == GLFW_KEY_LEFT && action == GLFW_PRESS){
-			this->UserInput.playbackSpeed -= 0.1;
+			constexpr float tolerance = 0.0001f;
+
+			if (fabs(this->UserInput.playbackSpeed - 0.1f) < tolerance) {
+				return;
+			}
+
+			if (this->UserInput.playbackSpeed != 0.f){
+				this->UserInput.playbackSpeed -= 0.1;
+			}
 		}
 
 		if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
-			this->UserInput.playbackSpeed += 0.1;
+			if (this->UserInput.playbackSpeed != 0.f){
+				this->UserInput.playbackSpeed += 0.1;
+			}
 		}
 
 		if (key == GLFW_KEY_R){
