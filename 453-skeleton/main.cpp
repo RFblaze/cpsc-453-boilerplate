@@ -25,7 +25,7 @@
 
 
 struct Parameters{
-	bool isPlaying =true;
+	bool reset = false;
 	float playbackSpeed = 1.f;
 	float prevPlaybackSpeed = 1.f;
 };
@@ -63,6 +63,10 @@ public:
 
 		if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
 			this->UserInput.playbackSpeed += 0.1;
+		}
+
+		if (key == GLFW_KEY_R){
+			this->UserInput.reset = !this->UserInput.reset;
 		}
 	}
 	virtual void mouseButtonCallback(int button, int action, int mods) {
@@ -112,7 +116,12 @@ public:
 	}
 
 	Parameters getUserInput(){
-		return this->UserInput;
+		Parameters ret =  this->UserInput;
+		if (this->UserInput.reset){
+			this->UserInput.reset = !this->UserInput.reset;
+		}
+		
+		return ret;
 	}
 
 private:
@@ -267,6 +276,13 @@ struct CelestialBody{
 		// after the local has been done, update the children
 		updateChildren(tSim, position, axis_tilt);
 	}
+
+	void resetMatrices(){
+		planetRotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
+		translation = glm::translate(glm::mat4(1.f), position);
+
+		orbitRotation = glm::rotate(glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f,1.f,0.f));
+	}
 	
 };
 
@@ -368,6 +384,30 @@ int main() {
 		glm::mat4 viewMat = a4->getView();
 
 		Parameters userInput = a4->getUserInput();
+
+		if (userInput.reset){
+			sun.setOrbitRotation(0.f);
+			sun.setTilt(0.f);
+			sun.PlanetRotationSpeed = 36.f;
+			sun.OrbitSpeed = 0.f;
+			sun.setPosition(glm::vec3(0.f,0.f,0.f));
+
+			earth.setScale(0.5f);
+			earth.setTilt(23.45f);
+			earth.setPosition(glm::vec3(3.f,0.f,0.f));
+			earth.PlanetRotationSpeed = 100.f;
+			earth.OrbitSpeed = 10.f;
+
+			moon.setScale(0.1f);
+			moon.setTilt(13.f);
+			moon.setPosition(glm::vec3(3.8f,1.71f,0.f));
+			moon.PlanetRotationSpeed = 0.f;
+			moon.OrbitSpeed = 200.f;
+
+			sun.resetMatrices();
+			earth.resetMatrices();
+			moon.resetMatrices();
+		}
 
 		float tcurr = glfwGetTime();
 		float tDelta = tcurr - tprev;
