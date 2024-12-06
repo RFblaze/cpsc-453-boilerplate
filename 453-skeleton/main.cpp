@@ -27,6 +27,7 @@
 struct Parameters{
 	bool isPlaying =true;
 	float playbackSpeed = 1.f;
+	float prevPlaybackSpeed = 1.f;
 };
 
 // EXAMPLE CALLBACKS
@@ -46,7 +47,13 @@ public:
 	virtual void keyCallback(int key, int scancode, int action, int mods) {
 		// Spacebar toggles between Pause/Play
 		if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
-			this->UserInput.isPlaying = !this->UserInput.isPlaying;
+			if (this->UserInput.playbackSpeed != 0){
+				this->UserInput.prevPlaybackSpeed = this->UserInput.playbackSpeed;
+				this->UserInput.playbackSpeed = 0.f;
+			}
+			else {
+				this->UserInput.playbackSpeed = this->UserInput.prevPlaybackSpeed;
+			}
 		}
 
 		// Left and right arrow keys decrease/increase playback speed
@@ -175,14 +182,13 @@ std::vector<glm::vec3> createSurfaceOfRevolution(const std::vector<glm::vec3>& C
     return surfaceVertices;
 }
 
-
 struct CelestialBody{
 	CPU_Geometry cgeom;
 	GPU_Geometry ggeom;
 	Texture texture;
 
 	glm::vec3 position = {0.f,0.f,0.f};
-	glm::vec3 axis_tilt = {0.f,0.f,0.f};
+	glm::vec3 axis_tilt = {0.f,1.f,0.f};
 
 	float PlanetRotationSpeed;
 	float OrbitSpeed;
@@ -225,7 +231,7 @@ struct CelestialBody{
 
 	void setTilt(float angle){
 		tilt = glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f,0.f,1.f));
-		axis_tilt = (tilt, glm::vec4(1.f));
+		axis_tilt = (tilt * glm::vec4(0.f,1.f,0.f,0.f));
 	}
 
 	void setRotation(float angle){
@@ -251,11 +257,12 @@ struct CelestialBody{
 	void updateLocal(float tSim, glm::vec3 orbitPoint, glm::vec3 orbitalAxis){
 		// update the local transformation matrix(ces)
 		planetRotation = glm::rotate(planetRotation, glm::radians(tSim * PlanetRotationSpeed), glm::vec3(0.f, 1.f, 0.f));
-		orbitRotation =  glm::translate(glm::mat4(1.0f), orbitPoint) * glm::rotate(glm::mat4(1.f), glm::radians(tSim * OrbitSpeed), glm::vec3(0.f, 1.f, 0.f)) * glm::translate(glm::mat4(1.0f), -orbitPoint);
+		orbitRotation =  glm::translate(glm::mat4(1.0f), orbitPoint) 
+						* glm::rotate(glm::mat4(1.f), glm::radians(tSim * OrbitSpeed), orbitalAxis) 
+						* glm::translate(glm::mat4(1.0f), -orbitPoint);
 
 		position = (orbitRotation * glm::vec4(position, 1.f));
-		translation = glm::translate(glm::mat4(1.0f), glm::vec3(orbitRotation * glm::vec4(position, 1.f)));
-
+		translation = glm::translate(glm::mat4(1.0f), position);
 
 		// after the local has been done, update the children
 		updateChildren(tSim, position, axis_tilt);
@@ -335,7 +342,7 @@ int main() {
 	moon.setScale(0.1f);
 	moon.setTilt(13.f);
 	moon.setPosition(glm::vec3(3.8f,1.71f,0.f));
-	moon.PlanetRotationSpeed = 36.f;
+	moon.PlanetRotationSpeed = 0.f;
 	moon.OrbitSpeed = 200.f;
 	
 
@@ -363,12 +370,10 @@ int main() {
 		Parameters userInput = a4->getUserInput();
 
 		float tcurr = glfwGetTime();
-
 		float tDelta = tcurr - tprev;
-		std::cout << "tDelta:" << tDelta << std::endl;
 		float tSim = tDelta * userInput.playbackSpeed;
-		std::cout << "tSim:" << tSim << std::endl;
 		tprev = tcurr;
+
 		sun.updateLocal(tSim, glm::vec3(0.f,0.f,0.f), glm::vec3(0.f,1.f,0.f));
 
 		// Sun
