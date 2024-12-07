@@ -74,8 +74,8 @@ public:
 				this->UserInput.playbackSpeed += 0.1;
 			}
 		}
-
-		if (key == GLFW_KEY_R){
+		// Reset
+		if (key == GLFW_KEY_R && action == GLFW_PRESS){
 			this->UserInput.reset = !this->UserInput.reset;
 		}
 	}
@@ -276,7 +276,7 @@ struct CelestialBody{
 	void updateLocal(float tSim, glm::vec3 orbitPoint, glm::vec3 orbitalAxis){
 		// update the local transformation matrix(ces)
 		planetRotation = glm::rotate(planetRotation, glm::radians(tSim * PlanetRotationSpeed), glm::vec3(0.f, 1.f, 0.f));
-		orbitRotation =  glm::translate(glm::mat4(1.0f), orbitPoint) 
+		orbitRotation =  glm::translate(glm::mat4(1.0f), orbitPoint)
 						* glm::rotate(glm::mat4(1.f), glm::radians(tSim * OrbitSpeed), orbitalAxis) 
 						* glm::translate(glm::mat4(1.0f), -orbitPoint);
 
@@ -367,9 +367,9 @@ int main() {
 
 	moon.setScale(0.1f);
 	moon.setTilt(13.f);
-	moon.setPosition(glm::vec3(3.8f,1.71f,0.f));
+	moon.setPosition(glm::vec3(3.8f,1.41f,0.f));
 	moon.PlanetRotationSpeed = 0.f;
-	moon.OrbitSpeed = 200.f;
+	moon.OrbitSpeed = 300.f;
 	
 
 	// Define transformation hierarchies so that the transformations are relative to parents
@@ -388,8 +388,9 @@ int main() {
 		glEnable(GL_DEPTH_TEST);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+		Parameters userInput = a4->getUserInput();
+		
 		shader.use();
-
 		a4->viewPipeline(shader);
 		glm::mat4 viewMat = a4->getView();
 
