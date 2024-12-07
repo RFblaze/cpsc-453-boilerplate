@@ -22,3 +22,6 @@ Linux Mint 21.1 Vera
 
 ### Compiler
 g++ 11.4.0
+
+### Use of AI
+ChatGPT was used to generate the skeleton code for the fragment shader & for debugging purposes in the main.cpp file.
