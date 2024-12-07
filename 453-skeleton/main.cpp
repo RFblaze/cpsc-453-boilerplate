@@ -394,8 +394,6 @@ int main() {
 		a4->viewPipeline(shader);
 		glm::mat4 viewMat = a4->getView();
 
-		Parameters userInput = a4->getUserInput();
-
 		if (userInput.reset){
 			sun.setOrbitRotation(0.f);
 			sun.setTilt(0.f);
